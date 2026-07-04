@@ -11,7 +11,7 @@
 
 1000명이 100개 한정 쿠폰을 **동시에** 요청하면, 아무 제어가 없을 때 100개를 초과해 발급되는
 버그가 발생합니다. 이 프로젝트는 그 문제를 **의도적으로 재현**한 뒤,
-`synchronized` → 비관적 락(DB) 순서로 해결 과정을 커밋 단위로 남기는 것을 목표로 합니다.
+비관적 락(DB)으로 해결하는 과정을 커밋 단위로 남기는 것을 목표로 합니다.
 
 ### 핵심 포인트
 - 발급 수량 증가(`read → +1 → write`) 지점이 레이스 컨디션의 물리적 위치
@@ -62,8 +62,9 @@ Controller → Service → Repository → Database
 | 버전 | 방식 | 기대 결과 |
 |------|------|-----------|
 | **V1** | 제어 없음 (`@Transactional`만) | 1000 스레드 → **100개 초과 발급** (문제 재현) |
-| **V2** | `synchronized` | 단일 인스턴스에서 정확히 100개 (한계: scale-out 시 깨짐) |
-| **V3** | 비관적 락 (`SELECT ... FOR UPDATE`) | **정확히 100개** (해결) |
+| **V2** | 비관적 락 (`SELECT ... FOR UPDATE`) | **정확히 100개** (해결) |
+
+> **V2의 한계**: 정확성은 보장되지만 발급 요청마다 DB row lock에 부하가 집중돼 트래픽이 커질수록 성능이 저하됩니다. 이 병목이 Phase 2에서 **Redis** 로 넘어가는 이유입니다.
 
 ---
 
@@ -74,9 +75,9 @@ API 문서화와 동작 확인은 **Swagger UI** 에서 진행합니다: `http:/
 
 ### 쿠폰 발급
 ```
-POST /api/v1/coupons/{couponId}/issue?userId={userId}&strategy={none|sync|pessimistic}
+POST /api/v1/coupons/{couponId}/issue?userId={userId}&strategy={none|pessimistic}
 ```
-- `strategy` 생략 시 기본값은 해결 전략(V3)
+- `strategy` 생략 시 기본값은 해결 전략(V2)
 - 성공: `201 Created`
 - 재고 소진: `409 Conflict`
 
@@ -126,8 +127,7 @@ GET  /api/v1/coupons/{couponId}         # 잔여 수량 조회
 1000건을 동시에 발급 요청한 뒤 실제 발급 건수(`countByCouponId`)를 검증합니다.
 
 - V1: 발급 수 100 초과 → 레이스 컨디션 재현
-- V2: 단일 인스턴스 100개 통과
-- V3: 정확히 100개 → 비관적 락으로 해결
+- V2: 정확히 100개 → 비관적 락으로 해결
 
 ---
 
@@ -137,7 +137,7 @@ GET  /api/v1/coupons/{couponId}         # 잔여 수량 조회
 src/main/java/org/coupon/racecoupon
 ├── config/       # QuerydslConfig, OpenApiConfig (Swagger)
 ├── controller/   # CouponIssueController (+ CouponIssueControllerApi 문서 인터페이스)
-├── service/      # 동시성 전략 3종 (V1/V2/V3)
+├── service/      # 동시성 전략 2종 (V1/V2)
 ├── repository/   # CouponRepository, IssuedCouponRepository (+ QueryDSL)
 ├── domain/       # Coupon, IssuedCoupon
 ├── dto/          # CouponIssueResponse
