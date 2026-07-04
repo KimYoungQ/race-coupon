@@ -40,4 +40,7 @@ out/
 .omc/
 AGENTS.md
 *.md
+!README.md
 docs/
+.png
+.svg
