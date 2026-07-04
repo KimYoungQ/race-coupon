@@ -37,3 +37,7 @@ out/
 .vscode/
 
 .env
+.omc/
+AGENTS.md
+*.md
+docs/
