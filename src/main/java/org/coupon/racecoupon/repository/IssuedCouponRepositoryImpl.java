@@ -3,6 +3,8 @@ package org.coupon.racecoupon.repository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Optional;
+
 import static org.coupon.racecoupon.domain.QIssuedCoupon.issuedCoupon;
 
 @RequiredArgsConstructor
@@ -17,6 +19,6 @@ public class IssuedCouponRepositoryImpl implements IssuedCouponRepositoryCustom 
                 .from(issuedCoupon)
                 .where(issuedCoupon.couponId.eq(couponId))
                 .fetchOne();
-        return count != null ? count : 0L;
+        return Optional.ofNullable(count).orElse(0L);
     }
 }
