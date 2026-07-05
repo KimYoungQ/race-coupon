@@ -35,21 +35,6 @@
 | In-Memory | Redis (Spring Data Redis, Lua Script) |
 | Build | Gradle |
 | Infra | Docker Compose |
-| API 문서 | SpringDoc OpenAPI (Swagger UI) |
-| Test | JUnit 5, AssertJ, Mockito, `java.util.concurrent` (ExecutorService, CountDownLatch) |
-
-<br>
-<br>
-
-## 동시성 전략
-
-| 버전 | 방식 | 기대 결과 |
-|------|------|-----------|
-| **V1** | 제어 없음 (`@Transactional`만) | 1000 스레드 → **100개 초과 발급** (문제 재현) |
-| **V2** | 비관적 락 (`SELECT ... FOR UPDATE`) | **정확히 100개** (DB row 락으로 직렬화) |
-| **V3** | Redis 원자적 카운팅 (`INCR`) | **정확히 100개** (DB 락 없이 처리량 확보) |
-
-> **비관적 락의 한계**: 정확성은 보장되지만 발급 요청마다 DB row lock에 부하가 집중돼 트래픽이 커질수록 성능이 저하됩니다. 이 병목을 **Redis `INCR` 카운팅**으로 옮겨 DB 락 없이 해소했습니다(V3). 카운트 키에는 Lua 스크립트로 하루 TTL을 원자적으로 부여합니다.
 
 <br>
 <br>
