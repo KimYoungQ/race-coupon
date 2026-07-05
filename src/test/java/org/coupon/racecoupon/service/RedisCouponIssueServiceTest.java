@@ -68,4 +68,15 @@ class RedisCouponIssueServiceTest {
         long issuedCount = issuedCouponRepository.countByCouponId(couponId);
         assertThat(issuedCount).isEqualTo(100L);
     }
+
+    @Test
+    @DisplayName("발급 시 카운트 키에 TTL(하루)이 설정된다")
+    void count_key_has_ttl() {
+        // when
+        redisCouponIssueService.issue(couponId, 1L);
+
+        // then
+        Long ttl = redisTemplate.getExpire("coupon:" + couponId + ":count");
+        assertThat(ttl).isBetween(1L, 86400L);
+    }
 }
