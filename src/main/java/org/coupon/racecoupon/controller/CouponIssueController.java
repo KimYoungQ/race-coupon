@@ -8,6 +8,7 @@ import org.coupon.racecoupon.exception.BusinessException;
 import org.coupon.racecoupon.exception.ErrorCode;
 import org.coupon.racecoupon.service.CouponIssueService;
 import org.coupon.racecoupon.service.PessimisticLockCouponIssueService;
+import org.coupon.racecoupon.service.RedisCouponIssueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,7 @@ public class CouponIssueController {
 
     private final CouponIssueService couponIssueService;
     private final PessimisticLockCouponIssueService pessimisticLockCouponIssueService;
+    private final RedisCouponIssueService redisCouponIssueService;
 
     @PostMapping("/{couponId}/issue")
     public ResponseEntity<ApiResponse<CouponIssueResponse>> issue(
@@ -35,6 +37,7 @@ public class CouponIssueController {
         CouponIssueResponse response = switch (strategy) {
             case "none" -> couponIssueService.issue(couponId, userId);
             case "pessimistic" -> pessimisticLockCouponIssueService.issue(couponId, userId);
+            case "redis" -> redisCouponIssueService.issue(couponId, userId);
             default -> throw new BusinessException(ErrorCode.INVALID_STRATEGY, "지원하지 않는 전략입니다: " + strategy);
         };
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
