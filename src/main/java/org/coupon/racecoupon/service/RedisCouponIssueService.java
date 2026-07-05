@@ -16,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RedisCouponIssueService {
 
-    private static final String COUNT_KEY_PREFIX = "coupon:count:";
-
     private final CouponRepository couponRepository;
     private final IssuedCouponRepository issuedCouponRepository;
     private final StringRedisTemplate redisTemplate;
@@ -28,7 +26,7 @@ public class RedisCouponIssueService {
                 .orElseThrow(() -> new CouponNotFoundException(couponId));
         long totalQuantity = coupon.getTotalQuantity();
 
-        String countKey = COUNT_KEY_PREFIX + couponId;
+        String countKey = countKey(couponId);
         Long count = redisTemplate.opsForValue().increment(countKey);
         if (count == null || count > totalQuantity) {
             redisTemplate.opsForValue().decrement(countKey);
@@ -38,5 +36,9 @@ public class RedisCouponIssueService {
         issuedCouponRepository.save(IssuedCoupon.create(userId, couponId));
 
         return new CouponIssueResponse(couponId, count, totalQuantity - count);
+    }
+
+    private String countKey(Long couponId) {
+        return "coupon:" + couponId + ":count";
     }
 }

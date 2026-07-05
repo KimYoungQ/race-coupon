@@ -38,7 +38,7 @@ class RedisCouponIssueServiceTest {
         issuedCouponRepository.deleteAllInBatch();
         couponRepository.deleteAllInBatch();
         couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L)).getId();
-        redisTemplate.delete("coupon:count:" + couponId);
+        redisTemplate.delete("coupon:" + couponId + ":count");
     }
 
     @Test
