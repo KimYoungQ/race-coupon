@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.racecoupon.common.ApiResponse;
 import org.coupon.racecoupon.dto.CouponIssueResponse;
+import org.coupon.racecoupon.exception.BusinessException;
+import org.coupon.racecoupon.exception.ErrorCode;
 import org.coupon.racecoupon.service.CouponIssueService;
+import org.coupon.racecoupon.service.PessimisticLockCouponIssueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +24,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class CouponIssueController {
 
     private final CouponIssueService couponIssueService;
+    private final PessimisticLockCouponIssueService pessimisticLockCouponIssueService;
 
     @PostMapping("/{couponId}/issue")
-    public ResponseEntity<ApiResponse<CouponIssueResponse>> issue(@PathVariable Long couponId,
-                                                                  @RequestParam Long userId) {
-        log.info("쿠폰 발급 요청: couponId={}, userId={}", couponId, userId);
-        CouponIssueResponse response = couponIssueService.issue(couponId, userId);
+    public ResponseEntity<ApiResponse<CouponIssueResponse>> issue(
+            @PathVariable Long couponId,
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "pessimistic") String strategy) {
+        log.info("쿠폰 발급 요청: couponId={}, userId={}, strategy={}", couponId, userId, strategy);
+        CouponIssueResponse response = switch (strategy) {
+            case "none" -> couponIssueService.issue(couponId, userId);
+            case "pessimistic" -> pessimisticLockCouponIssueService.issue(couponId, userId);
+            default -> throw new BusinessException(ErrorCode.INVALID_STRATEGY, "지원하지 않는 전략입니다: " + strategy);
+        };
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
