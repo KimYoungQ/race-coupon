@@ -24,6 +24,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-kafka'
+    // JSON 직렬화 (Kafka JsonSerializer/Deserializer가 참조하는 Jackson 2)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'com.h2database:h2'

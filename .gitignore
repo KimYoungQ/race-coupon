@@ -38,6 +38,7 @@ out/
 
 .env
 .omc/
+benchmark/
 AGENTS.md
 *.md
 !README.md
