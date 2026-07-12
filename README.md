@@ -48,6 +48,7 @@
 
 - [동시성 문제 해결 전략 - 비관적 락](https://complete-hurricane-1d5.notion.site/394eca6f192b800f8c2ad27ab4e914a0?source=copy_link)
 - [동시성 문제 해결 전략 - Redis](https://complete-hurricane-1d5.notion.site/Redis-394eca6f192b809bac89d908a81b36c8?source=copy_link)
+- [부하 테스트 기반 쿠폰 발급 시스템 성능 개선 및 동시성 제어 검증 (Redis + Kafka)](https://complete-hurricane-1d5.notion.site/Redis-Kafka-39beca6f192b8122bdd2c77dd36e81e0?source=copy_link)
 
 <br>
 <br>
