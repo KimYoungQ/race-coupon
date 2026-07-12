@@ -53,48 +53,6 @@
 <br>
 <br>
 
-## 실행 방법
-
-### 1. 환경 변수 준비
-```bash
-cp .env.example .env   # 값 채우기
-```
-
-### 2. 인프라 기동 (MySQL · Kafka · Kafka UI)
-```bash
-docker-compose up -d   # MySQL 8.0(coupon_service), Kafka, Kafka UI(localhost:8080)
-```
-
-### 3. Redis 기동
-```bash
-docker run --name myredis -d -p 6379:6379 redis   # 발급 카운팅용
-```
-
-### 4. 애플리케이션 실행
-```bash
-./gradlew bootRun      # 기본 포트 8081
-```
-<br>
-<br>
-
-## 테스트
-
-```bash
-./gradlew test
-```
-
-테스트는 JUnit 5 + AssertJ 기반이며(`@DisplayName` 한글, given/when/then),
-동시성 테스트가 이 프로젝트의 핵심입니다. `ExecutorService` + `CountDownLatch(1000)` 로
-1000건을 동시에 발급 요청한 뒤 실제 발급 건수(`countByCouponId`)를 검증합니다.
-
-- V1: 발급 수 100 초과 → 레이스 컨디션 재현
-- V2: 정확히 100개 → 비관적 락으로 해결
-- V3: 정확히 100개 → Redis `INCR`로 DB 락 없이 해결
-- V4: 정확히 100개 → Kafka 비동기 발급 (`@EmbeddedKafka`로 검증)
-
-<br>
-<br>
-
 ## 프로젝트 구조
 
 ```
