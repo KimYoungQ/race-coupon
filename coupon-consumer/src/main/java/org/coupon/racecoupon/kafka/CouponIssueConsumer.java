@@ -16,7 +16,7 @@ public class CouponIssueConsumer {
 
     private final IssuedCouponRepository issuedCouponRepository;
 
-    @KafkaListener(topics = CouponIssueProducer.TOPIC, groupId = "coupon-issue")
+    @KafkaListener(topics = CouponIssueMessage.TOPIC, groupId = "coupon-issue")
     public void consume(ConsumerRecord<String, CouponIssueMessage> record, Acknowledgment ack) {
         CouponIssueMessage message = record.value();
         log.info("발급 메시지 소비: key={}, partition={}, offset={}, couponId={}, userId={}",

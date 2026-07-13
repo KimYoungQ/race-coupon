@@ -10,12 +10,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CouponIssueProducer {
 
-    public static final String TOPIC = "coupon-issue";
-
     private final KafkaTemplate<String, CouponIssueMessage> kafkaTemplate;
 
     public void issue(CouponIssueMessage message) {
-        kafkaTemplate.send(TOPIC, String.valueOf(message.userId()), message)
+        kafkaTemplate.send(CouponIssueMessage.TOPIC, String.valueOf(message.userId()), message)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         var metadata = result.getRecordMetadata();
