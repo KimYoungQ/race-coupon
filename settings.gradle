@@ -1,1 +1,5 @@
 rootProject.name = 'raceCoupon'
+
+include 'coupon-core'
+include 'coupon-api'
+include 'coupon-consumer'
