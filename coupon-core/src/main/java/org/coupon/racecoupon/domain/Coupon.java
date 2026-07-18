@@ -2,6 +2,8 @@ package org.coupon.racecoupon.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,14 +34,24 @@ public class Coupon {
     @Column(nullable = false)
     private Long issuedQuantity;
 
-    private Coupon(String title, Long totalQuantity) {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DiscountType discountType;
+
+    @Column(nullable = false)
+    private Long discountValue;
+
+    private Coupon(String title, Long totalQuantity, DiscountType discountType, Long discountValue) {
+        discountType.validate(discountValue);
         this.title = title;
         this.totalQuantity = totalQuantity;
         this.issuedQuantity = 0L;
+        this.discountType = discountType;
+        this.discountValue = discountValue;
     }
 
-    public static Coupon create(String title, Long totalQuantity) {
-        return new Coupon(title, totalQuantity);
+    public static Coupon create(String title, Long totalQuantity, DiscountType discountType, Long discountValue) {
+        return new Coupon(title, totalQuantity, discountType, discountValue);
     }
 
     /**

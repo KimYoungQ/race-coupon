@@ -1,6 +1,7 @@
 package org.coupon.racecoupon.service;
 
 import org.coupon.racecoupon.domain.Coupon;
+import org.coupon.racecoupon.domain.DiscountType;
 import org.coupon.racecoupon.kafka.CouponIssueMessage;
 import org.coupon.racecoupon.repository.CouponRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,7 @@ class KafkaCouponIssueServiceTest {
     @BeforeEach
     void setUp() {
         couponRepository.deleteAllInBatch();
-        couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L)).getId();
+        couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L, DiscountType.PERCENT, 10L)).getId();
         redisTemplate.delete("coupon:" + couponId + ":count");
     }
 

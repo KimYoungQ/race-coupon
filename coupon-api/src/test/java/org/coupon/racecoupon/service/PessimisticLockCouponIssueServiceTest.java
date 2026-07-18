@@ -1,6 +1,7 @@
 package org.coupon.racecoupon.service;
 
 import org.coupon.racecoupon.domain.Coupon;
+import org.coupon.racecoupon.domain.DiscountType;
 import org.coupon.racecoupon.repository.CouponRepository;
 import org.coupon.racecoupon.repository.IssuedCouponRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +34,7 @@ class PessimisticLockCouponIssueServiceTest {
     void setUp() {
         issuedCouponRepository.deleteAllInBatch();
         couponRepository.deleteAllInBatch();
-        couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L)).getId();
+        couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L, DiscountType.PERCENT, 10L)).getId();
     }
 
     @Test
