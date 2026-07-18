@@ -76,9 +76,10 @@ public class Coupon {
 
     /**
      * 이 쿠폰을 적용했을 때의 최종 결제가(0 하한).
-     * 유형별 할인액 계산은 {@link DiscountType} 전략에 위임하고, 0 하한만 도메인이 보장한다.
+     * 유형별 할인액 계산은 {@link DiscountPolicyFactory}가 고른 전략에 위임하고, 0 하한만 도메인이 보장한다.
      */
-    public long finalPrice(long originalPrice) {
-        return Math.max(0, originalPrice - discountType.discount(originalPrice, discountValue));
+    public long finalPrice(long price) {
+        long discount = DiscountPolicyFactory.create(this).discount(price);
+        return Math.max(0, price - discount);
     }
 }
