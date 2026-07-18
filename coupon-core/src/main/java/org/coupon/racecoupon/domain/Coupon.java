@@ -41,17 +41,31 @@ public class Coupon {
     @Column(nullable = false)
     private Long discountValue;
 
-    private Coupon(String title, Long totalQuantity, DiscountType discountType, Long discountValue) {
+    /** 최대 할인 한도(선택). null이면 한도 없음. */
+    private Long maxDiscountAmount;
+
+    /** 최소 주문 금액(선택). null이면 조건 없음. */
+    private Long minOrderAmount;
+
+    private Coupon(String title, Long totalQuantity, DiscountType discountType, Long discountValue,
+                   Long maxDiscountAmount, Long minOrderAmount) {
         discountType.validate(discountValue);
         this.title = title;
         this.totalQuantity = totalQuantity;
         this.issuedQuantity = 0L;
         this.discountType = discountType;
         this.discountValue = discountValue;
+        this.maxDiscountAmount = maxDiscountAmount;
+        this.minOrderAmount = minOrderAmount;
     }
 
     public static Coupon create(String title, Long totalQuantity, DiscountType discountType, Long discountValue) {
-        return new Coupon(title, totalQuantity, discountType, discountValue);
+        return new Coupon(title, totalQuantity, discountType, discountValue, null, null);
+    }
+
+    public static Coupon create(String title, Long totalQuantity, DiscountType discountType, Long discountValue,
+                                Long maxDiscountAmount, Long minOrderAmount) {
+        return new Coupon(title, totalQuantity, discountType, discountValue, maxDiscountAmount, minOrderAmount);
     }
 
     /**
@@ -76,7 +90,7 @@ public class Coupon {
 
     /**
      * 이 쿠폰을 적용했을 때의 최종 결제가(0 하한).
-     * 유형별 할인액 계산은 {@link DiscountPolicyFactory}가 고른 전략에 위임하고, 0 하한만 도메인이 보장한다.
+     * 유형(전략)과 조건(데코레이터) 조립은 {@link DiscountPolicyFactory}가 담당하고, 0 하한만 도메인이 보장한다.
      */
     public long finalPrice(long price) {
         long discount = DiscountPolicyFactory.create(this).discount(price);
