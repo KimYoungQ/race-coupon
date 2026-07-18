@@ -44,6 +44,7 @@
 - [동시성 문제 해결 전략 - Redis](https://complete-hurricane-1d5.notion.site/Redis-394eca6f192b809bac89d908a81b36c8?source=copy_link)
 - [부하 테스트 기반 쿠폰 발급 시스템 성능 개선 및 동시성 제어 검증 (Redis + Kafka)](https://complete-hurricane-1d5.notion.site/Redis-Kafka-39beca6f192b8122bdd2c77dd36e81e0?source=copy_link)
 - [멀티모듈 분리 + Kafka 프로듀서·컨슈머 튜닝으로 처리량 개선](https://complete-hurricane-1d5.notion.site/Kafka-39eeca6f192b81d0babec4c18be91e00?source=copy_link)
+- [OCP를 지키는 쿠폰 할인 설계 — 전략·데코레이터 패턴 적용](https://app.notion.com/p/OCP-3a1eca6f192b8117abdad904b7645a78?source=copy_link)
 
 <br>
 <br>
