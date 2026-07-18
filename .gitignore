@@ -38,7 +38,8 @@ out/
 
 .env
 .omc/
-benchmark/
+benchmark/*
+!benchmark/k6/
 AGENTS.md
 *.md
 !README.md
