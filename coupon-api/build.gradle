@@ -3,6 +3,9 @@ apply plugin: 'org.springframework.boot'
 dependencies {
     implementation project(':coupon-core')
 
+    // Eureka client — 게이트웨이가 lb://coupon-api 로 발견하도록 서비스 디스커버리에 등록.
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-kafka'

@@ -1,0 +1,17 @@
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    // Spring Cloud Gateway는 WebFlux(리액티브) 기반. starter-web/webmvc를 넣으면 충돌하므로 금지.
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    // 게이트웨이는 JWT '검증'만 담당(발급은 user-service). GlobalFilter + jjwt(HS256).
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+}
+
+// .env가 저장소 루트에 있으므로 bootRun 작업 디렉터리를 루트로 맞춘다(coupon-api와 동일).
+tasks.named('bootRun') {
+    workingDir = rootProject.projectDir
+}
