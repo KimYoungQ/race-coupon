@@ -5,6 +5,11 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
     // ErrorCode가 org.springframework.http.HttpStatus를 참조
     api 'org.springframework:spring-web'
+    // GlobalExceptionHandler의 @Valid 검증 처리 + 각 서비스의 Request DTO Bean Validation
+    api 'org.springframework.boot:spring-boot-starter-validation'
+    // MissingRequestValueException이 ServletException을 상속해 컴파일에 필요하다.
+    // 런타임에는 각 서비스의 starter-webmvc가 제공하므로 compileOnly로 충분하다.
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     // Kafka JsonSerializer/Deserializer가 참조하는 Jackson 2
     api 'com.fasterxml.jackson.core:jackson-databind'
 
