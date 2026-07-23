@@ -1,6 +1,7 @@
 
 import http from 'k6/http';
 import { check } from 'k6';
+import { authHeaders } from './jwt.js';
 
 const BASE = __ENV.BASE_URL || 'http://localhost:8081';
 const COUPON_ID = __ENV.COUPON_ID || '1';
@@ -21,7 +22,10 @@ export const options = {
 };
 
 export default function () {
-  const res = http.get(`${BASE}/api/v1/coupons/${COUPON_ID}`);
+  // 조회도 인증이 필요하다(anyRequest().authenticated()).
+  const res = http.get(`${BASE}/api/v1/coupons/${COUPON_ID}`, {
+    headers: authHeaders(__VU),
+  });
   check(res, {
     'status is 200': (r) => r.status === 200,
     'body has remaining': (r) => r.body && r.body.includes('remaining'),
