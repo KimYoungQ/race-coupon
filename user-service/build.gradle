@@ -1,0 +1,27 @@
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    // ApiResponse·ErrorCode·BusinessException·GlobalExceptionHandler·JPA·validation을 공유받는다.
+    implementation project(':coupon-core')
+
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    // JWT '발급' 주체. Spring Security에는 JWT 생성 기능이 없어 jjwt가 필요하다.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // coupon-core의 드라이버는 runtimeOnly라 전이되지 않는다.
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+
+// .env가 저장소 루트에 있으므로 bootRun 작업 디렉터리를 루트로 맞춘다
+tasks.named('bootRun') {
+    workingDir = rootProject.projectDir
+}

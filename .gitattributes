@@ -1,3 +1,5 @@
 /gradlew text eol=lf
+# 컨테이너 안에서 실행되는 스크립트는 CRLF면 깨진다
+*.sh text eol=lf
 *.bat text eol=crlf
 *.jar binary
