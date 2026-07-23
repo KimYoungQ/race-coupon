@@ -1,5 +1,6 @@
 rootProject.name = 'raceCoupon'
 
+include 'common-security'
 include 'coupon-core'
 include 'coupon-api'
 include 'coupon-consumer'
