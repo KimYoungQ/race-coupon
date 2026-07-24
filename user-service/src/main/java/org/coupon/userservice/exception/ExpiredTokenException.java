@@ -1,7 +1,7 @@
 package org.coupon.userservice.exception;
 
-import org.coupon.racecoupon.exception.BusinessException;
-import org.coupon.racecoupon.exception.ErrorCode;
+import org.coupon.common.exception.BusinessException;
+import org.coupon.common.exception.ErrorCode;
 
 /**
  * 만료된 토큰. 클라이언트가 이 코드를 보고 Refresh Token으로 재발급을 시도할 수 있도록

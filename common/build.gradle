@@ -1,0 +1,23 @@
+apply plugin: 'java-library'
+
+dependencies {
+    // 전 서비스 공용 모듈: 응답(ApiResponse)·예외(ErrorCode/BusinessException/GlobalExceptionHandler)·
+    // JWT 클레임 계약(JwtTokenContract/JwtSecretProperties)만 담는다.
+    // WebFlux인 apigateway도 이 모듈을 쓰므로 JPA·서블릿·starter-web 등 특정 스택 의존을
+    // api/implementation로 노출하지 않는다(리액티브 게이트웨이가 SERVLET으로 오판돼 기동 실패).
+
+    // @ConfigurationProperties(JwtSecretProperties) 바인딩용. 등록은 각 서비스가 @EnableConfigurationProperties로.
+    api 'org.springframework.boot:spring-boot'
+    // ErrorCode가 org.springframework.http.HttpStatus를 참조(게이트웨이도 spring-web을 이미 가짐).
+    api 'org.springframework:spring-web'
+
+    // GlobalExceptionHandler가 @ConditionalOnWebApplication을 사용 → 컴파일에만 필요.
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    // ConstraintViolationException(@Valid 파라미터 검증) 처리에 필요 → 컴파일에만.
+    compileOnly 'org.springframework.boot:spring-boot-starter-validation'
+    // MissingRequestValueException이 ServletException을 상속 → 컴파일에만. 런타임은 서블릿 앱이 제공.
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+}

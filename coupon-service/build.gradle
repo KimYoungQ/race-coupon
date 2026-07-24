@@ -1,0 +1,50 @@
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    // 공통 응답·예외·JWT 계약
+    implementation project(':common')
+
+    // 도메인·리포지토리(구 coupon-core가 담당하던 JPA/QueryDSL을 이 모듈이 직접 소유)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // 게이트웨이를 우회한 직접 호출을 막기 위해 토큰을 '재검증'한다(2단 방어).
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-kafka'
+    // ErrorCode(common)의 HttpStatus 등 spring-web 타입 직접 참조
+    implementation 'org.springframework:spring-web'
+    // Kafka JsonSerializer/Deserializer가 참조하는 Jackson
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // Eureka client — 게이트웨이가 lb://coupon-service 로 발견하도록 등록
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    // 토큰 파싱·서명 검증(Spring Security에는 JWT 파싱 기능이 없어 jjwt가 필요)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // QueryDSL (Jakarta) — 구 coupon-core의 annotationProcessor를 이 모듈로 이관
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    implementation 'org.springframework.boot:spring-boot-h2console'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'com.h2database:h2'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+
+// .env가 저장소 루트에 있으므로 bootRun 작업 디렉터리를 루트로 맞춘다
+tasks.named('bootRun') {
+    workingDir = rootProject.projectDir
+}

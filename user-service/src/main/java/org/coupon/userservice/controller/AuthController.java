@@ -3,7 +3,7 @@ package org.coupon.userservice.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.coupon.racecoupon.common.ApiResponse;
+import org.coupon.common.response.ApiResponse;
 import org.coupon.userservice.dto.request.LoginRequest;
 import org.coupon.userservice.dto.request.SignupRequest;
 import org.coupon.userservice.dto.request.TokenRefreshRequest;

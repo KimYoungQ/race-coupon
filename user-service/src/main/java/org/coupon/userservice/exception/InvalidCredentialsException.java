@@ -1,7 +1,7 @@
 package org.coupon.userservice.exception;
 
-import org.coupon.racecoupon.exception.BusinessException;
-import org.coupon.racecoupon.exception.ErrorCode;
+import org.coupon.common.exception.BusinessException;
+import org.coupon.common.exception.ErrorCode;
 
 /**
  * 아이디 오류와 비밀번호 오류를 구분하지 않는다 — 어느 쪽이 틀렸는지 알려주면

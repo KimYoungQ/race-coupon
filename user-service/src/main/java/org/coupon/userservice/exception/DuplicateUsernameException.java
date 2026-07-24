@@ -1,7 +1,7 @@
 package org.coupon.userservice.exception;
 
-import org.coupon.racecoupon.exception.BusinessException;
-import org.coupon.racecoupon.exception.ErrorCode;
+import org.coupon.common.exception.BusinessException;
+import org.coupon.common.exception.ErrorCode;
 
 public class DuplicateUsernameException extends BusinessException {
 

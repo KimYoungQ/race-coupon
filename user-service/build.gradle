@@ -1,8 +1,12 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
-    // ApiResponse·ErrorCode·BusinessException·GlobalExceptionHandler·JPA·validation을 공유받는다.
-    implementation project(':coupon-core')
+    // ApiResponse·ErrorCode·BusinessException·GlobalExceptionHandler를 공유받는다.
+    implementation project(':common')
+
+    // 구 coupon-core가 전이로 제공하던 JPA·validation을 이 모듈이 직접 선언한다.
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -13,7 +17,6 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-    // coupon-core의 드라이버는 runtimeOnly라 전이되지 않는다.
     runtimeOnly 'com.mysql:mysql-connector-j'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
