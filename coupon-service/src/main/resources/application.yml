@@ -1,0 +1,98 @@
+server:
+  port: ${APP_PORT:8081}
+  servlet:
+    context-path: ""
+
+spring:
+  application:
+    name: coupon-service
+  config:
+    import: "optional:file:.env[.properties]"
+
+  # Datasource (MySQL)
+  datasource:
+    url: "jdbc:mysql://localhost:3306/coupon_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 600000
+      pool-name: RaceCouponHikariCP
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # Kafka (producer / consumer)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      compression-type: zstd
+      properties:
+        linger.ms: 0
+        enable.idempotence: true
+    # 발급 메시지를 소비해 IssuedCoupon으로 영속화(구 coupon-consumer 흡수)
+    consumer:
+      group-id: coupon-issue
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: org.coupon.couponservice.kafka
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+        max.poll.interval.ms: 300000
+    listener:
+      ack-mode: manual
+      concurrency: 3
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # SQL Initialization
+  sql:
+    init:
+      mode: always
+      platform: mysql
+      encoding: UTF-8
+
+  # Validation 메시지
+  messages:
+    basename: messages/validation
+    encoding: UTF-8
+
+# Eureka (service discovery) — 게이트웨이가 lb://coupon-service 로 발견
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# JWT 재검증용 비밀키(HS256). user-service·게이트웨이와 같은 값이어야 한다.
+# 기본값을 두지 않는다: 미설정이면 예측 가능한 키로 조용히 기동하는 사고를 막는다.
+jwt:
+  secret: ${JWT_SECRET}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    org.coupon.couponservice: DEBUG
+    org.springframework.jdbc: DEBUG
+    com.zaxxer.hikari: DEBUG
