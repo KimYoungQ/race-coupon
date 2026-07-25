@@ -51,6 +51,7 @@ public class SecurityConfig {
                 // 구체적인 규칙이 먼저, 포괄 규칙(anyRequest)이 나중.
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**").permitAll()
                         // 여기까지는 "유효한 Access Token인가"만 본다. 권한은 @PreAuthorize가 본다.
                         .anyRequest().authenticated())
                 // 인증 실패 시 빈 403 대신 401 + ApiResponse 본문을 내려주기 위한 진입점.

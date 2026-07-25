@@ -10,6 +10,8 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    // API 문서 — Boot 4.1(Spring 7)은 springdoc 3.x 라인이 호환된다(2.x는 Boot 3.x 전용).
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
     // JWT '발급' 주체. Spring Security에는 JWT 생성 기능이 없어 jjwt가 필요하다.

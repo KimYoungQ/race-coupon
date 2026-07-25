@@ -51,7 +51,11 @@ public class SecurityConfig {
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
             "/actuator/**",
+            // Swagger 문서·UI. /v3/api-docs/**는 집계된 다운스트림 문서(/v3/api-docs/{service})까지 포함한다.
             "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/webjars/**",
     };
 
     @Bean

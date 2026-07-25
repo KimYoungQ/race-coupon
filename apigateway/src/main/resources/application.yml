@@ -1,0 +1,81 @@
+# API Gateway (Spring Cloud Gateway · WebFlux)
+server:
+  port: 8080  # 외부 진입점. 클라이언트는 이 포트로만 요청한다.
+
+spring:
+  application:
+    name: apigateway
+  config:
+    import: "optional:file:.env[.properties]"
+  cloud:
+    gateway:
+      server:
+        webflux:            # Boot 4.1 / Spring Cloud Gateway의 WebFlux 서버 네임스페이스
+          routes:
+            # ===== 쿠폰 서비스 =====
+            - id: coupon-service
+              uri: lb://coupon-service        # lb:// = Eureka로 인스턴스를 찾아 로드밸런싱
+              predicates:
+                - Path=/api/v1/coupons/**
+              # StripPrefix 없음: 다운스트림도 같은 /api/v1 경로를 기대한다.
+
+            # ===== 사용자 서비스 =====
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/auth/**,/api/v1/users/**
+
+            # ===== Swagger 문서 집계 =====
+            # /v3/api-docs/{service} 를 각 서비스의 /v3/api-docs 로 프록시한다.
+            # /v3/api-docs/** 는 SecurityConfig에서 이미 열려 있어 별도 permitAll이 필요 없다.
+            - id: coupon-service-docs
+              uri: lb://coupon-service
+              predicates:
+                - Path=/v3/api-docs/coupon-service
+              filters:
+                - RewritePath=/v3/api-docs/coupon-service,/v3/api-docs
+
+            - id: user-service-docs
+              uri: lb://user-service
+              predicates:
+                - Path=/v3/api-docs/user-service
+              filters:
+                - RewritePath=/v3/api-docs/user-service,/v3/api-docs
+
+# 서비스 디스커버리
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# JWT 검증용 비밀키(HS256, 최소 32바이트). user-service와 반드시 같은 값.
+# 기본값을 두지 않는다: 미설정이면 기동을 실패시켜 예측 가능한 키로 뜨는 사고를 막는다.
+jwt:
+  secret: ${JWT_SECRET}
+
+# 통합 Swagger UI: http://localhost:8080/swagger-ui.html 에서 드롭다운으로 서비스 문서 전환
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    urls:
+      - name: coupon-service
+        url: /v3/api-docs/coupon-service
+      - name: user-service
+        url: /v3/api-docs/user-service
+
+# Actuator: 라우트 확인용 gateway 엔드포인트 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway, health, info
+
+# 로깅
+logging:
+  level:
+    root: INFO
+    org.coupon.apigateway: DEBUG
+    org.springframework.security: DEBUG
