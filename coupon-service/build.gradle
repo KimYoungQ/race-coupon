@@ -4,10 +4,8 @@ dependencies {
     // 공통 응답·예외·JWT 계약
     implementation project(':common')
 
-    // Config Server 클라이언트 — bootstrap 컨텍스트로 기동 시점에 설정을 받아온다.
-    // starter-bootstrap이 있어야 bootstrap.yml이 읽힌다(Spring Cloud 2020.0부터 기본 비활성).
+    // Config Server 클라이언트 — application.yml의 spring.config.import=configserver:로 받아온다
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
 
     // 도메인·리포지토리(구 coupon-core가 담당하던 JPA/QueryDSL을 이 모듈이 직접 소유)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

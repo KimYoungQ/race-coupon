@@ -1,10 +1,16 @@
 # 나머지 설정(라우트·springdoc·actuator·logging)은 config-service가
 # config/apigateway.yml + config/application.yml로 내려준다.
-# 여기 남는 것은 (1) 포트 — 외부 진입점이라 로컬에서 바로 보여야 한다,
-# (2) .env — 내려받은 설정의 ${JWT_SECRET} 플레이스홀더를 이 서비스가 직접 해석해야 하기 때문이다.
+#
+# import 순서대로 읽는다. .env가 먼저 있어야 config-service가 리터럴로 내려보낸
+# ${JWT_SECRET}을 이 서비스가 해석할 수 있다.
+# configserver에 optional:을 붙이지 않는다 — config-service가 없으면 조용히 뜨는 대신 기동을 실패시킨다.
 server:
-  port: 8080
+  port: 8080  # 외부 진입점. 클라이언트는 이 포트로만 요청한다.
 
 spring:
+  application:
+    name: apigateway
   config:
-    import: "optional:file:.env[.properties]"
+    import:
+      - "optional:file:.env[.properties]"
+      - "configserver:${CONFIG_URI:http://localhost:8888}"

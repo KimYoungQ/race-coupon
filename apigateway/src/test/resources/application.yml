@@ -4,6 +4,12 @@ spring:
   application:
     name: apigateway-test
 
+  # 이 파일이 main의 application.yml을 가리므로 configserver: import가 없다.
+  # starter-config는 import가 없으면 기동을 거부하므로(ImportException) 명시적으로 끈다.
+  cloud:
+    config:
+      enabled: false
+
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes
 
