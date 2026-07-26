@@ -23,6 +23,7 @@ dependencies {
 
     // Config Server 클라이언트 — application.yml의 spring.config.import=configserver:로 받아온다
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'

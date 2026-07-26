@@ -3,6 +3,7 @@ apply plugin: 'org.springframework.boot'
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-config-server'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
 }
 
 // search-locations가 file:./config 상대경로이므로 작업 디렉터리를 루트로 맞춘다

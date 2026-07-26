@@ -6,6 +6,8 @@ dependencies {
 
     // Config Server 클라이언트 — application.yml의 spring.config.import=configserver:로 받아온다
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // 구 coupon-core가 전이로 제공하던 JPA·validation을 이 모듈이 직접 선언한다.
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
