@@ -1,6 +1,5 @@
 package org.coupon.couponservice.dto;
 
-import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 
 /**
@@ -16,16 +15,4 @@ public record CouponResponse(
         Long maxDiscountAmount,
         Long minOrderAmount
 ) {
-
-    public static CouponResponse from(Coupon coupon) {
-        return new CouponResponse(
-                coupon.getId(),
-                coupon.getTitle(),
-                coupon.getTotalQuantity(),
-                coupon.getIssuedQuantity(),
-                coupon.getDiscountType(),
-                coupon.getDiscountValue(),
-                coupon.getMaxDiscountAmount(),
-                coupon.getMinOrderAmount());
-    }
 }

@@ -5,6 +5,7 @@ import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.IssuedCoupon;
 import org.coupon.couponservice.dto.CouponIssueResponse;
 import org.coupon.couponservice.exception.CouponNotFoundException;
+import org.coupon.couponservice.mapper.CouponMapper;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class PessimisticLockCouponIssueService {
 
     private final CouponRepository couponRepository;
     private final IssuedCouponRepository issuedCouponRepository;
+    private final CouponMapper couponMapper;
 
     @Transactional
     public CouponIssueResponse issue(Long couponId, Long userId) {
@@ -26,6 +28,6 @@ public class PessimisticLockCouponIssueService {
         couponRepository.save(coupon);
         issuedCouponRepository.save(IssuedCoupon.create(userId, couponId));
 
-        return CouponIssueResponse.from(coupon);
+        return couponMapper.toIssueResponse(coupon);
     }
 }

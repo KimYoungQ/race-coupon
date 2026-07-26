@@ -17,6 +17,7 @@ import org.coupon.userservice.exception.InvalidCredentialsException;
 import org.coupon.userservice.exception.InvalidTokenException;
 import org.coupon.userservice.exception.UserNotFoundException;
 import org.coupon.userservice.jwt.JwtTokenProvider;
+import org.coupon.userservice.mapper.UserMapper;
 import org.coupon.userservice.repository.RefreshTokenRepository;
 import org.coupon.userservice.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -46,6 +47,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserMapper userMapper;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -67,7 +69,7 @@ public class AuthService {
         User saved = userRepository.save(user);
 
         log.info("회원가입 완료: userId={}, username={}", saved.getId(), saved.getUsername());
-        return SignupResponse.of(saved);
+        return userMapper.toSignupResponse(saved);
     }
 
     @Transactional
@@ -85,11 +87,11 @@ public class AuthService {
         saveOrRotateRefreshToken(user.getId(), refreshToken);
 
         log.info("로그인 완료: userId={}", user.getId());
-        return LoginResponse.of(
+        return userMapper.toLoginResponse(
+                user,
                 accessToken,
                 refreshToken,
-                jwtTokenProvider.getAccessTokenValiditySeconds(),
-                user.getUsername());
+                jwtTokenProvider.getAccessTokenValiditySeconds());
     }
 
     @Transactional

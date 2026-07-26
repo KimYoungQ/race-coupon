@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.dto.CouponCreateRequest;
 import org.coupon.couponservice.dto.CouponResponse;
+import org.coupon.couponservice.mapper.CouponMapper;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CouponAdminService {
 
     private final CouponRepository couponRepository;
+    private final CouponMapper couponMapper;
 
     /**
      * 할인 값 검증은 {@link Coupon#create}가 도메인 불변식으로 처리한다.
@@ -38,6 +40,6 @@ public class CouponAdminService {
         Coupon saved = couponRepository.save(coupon);
         log.info("쿠폰 등록 완료: couponId={}, title={}, totalQuantity={}",
                 saved.getId(), saved.getTitle(), saved.getTotalQuantity());
-        return CouponResponse.from(saved);
+        return couponMapper.toResponse(saved);
     }
 }
