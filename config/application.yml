@@ -1,0 +1,16 @@
+# 전 서비스 공통 설정. config-service가 모든 클라이언트에 함께 내려준다.
+#
+# ${JWT_SECRET} 같은 플레이스홀더는 config-service가 치환하지 않는다.
+# 리터럴 그대로 전달되고 각 서비스가 자신의 .env로 해석하므로, 실제 비밀값은 이 파일에 없다.
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# 게이트웨이·user-service·coupon-service가 같은 값을 써야 한다(HS256 대칭키).
+# 도입 전에는 세 파일에 따로 선언돼 있었다.
+jwt:
+  secret: ${JWT_SECRET}

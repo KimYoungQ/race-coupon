@@ -1,0 +1,8 @@
+# 테스트 전용 bootstrap — 같은 이름의 main 리소스를 테스트 클래스패스에서 가린다.
+#
+# spring.cloud.config.enabled는 bootstrap 컨텍스트에서 평가되므로 application.yml에 두면 무효다.
+# 여기 없으면 테스트가 localhost:8888을 찾다 fail-fast에 걸려 전부 기동 실패한다.
+spring:
+  cloud:
+    config:
+      enabled: false

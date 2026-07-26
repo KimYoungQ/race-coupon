@@ -21,6 +21,11 @@ dependencies {
     // common은 JPA·서블릿 의존을 노출하지 않아 WebFlux 게이트웨이가 그대로 쓸 수 있다.
     implementation project(':common')
 
+    // Config Server 클라이언트 — bootstrap 컨텍스트로 기동 시점에 설정을 받아온다.
+    // starter-bootstrap이 있어야 bootstrap.yml이 읽힌다(Spring Cloud 2020.0부터 기본 비활성).
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'io.jsonwebtoken:jjwt-api:0.12.6'

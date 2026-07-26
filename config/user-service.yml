@@ -1,0 +1,27 @@
+spring:
+  # Datasource (MySQL) — Database per Service: coupon_service와 분리된 user_service 스키마
+  datasource:
+    url: "jdbc:mysql://localhost:3306/user_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA / Hibernate — 계정은 재기동에도 살아남아야 하므로 update
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# JWT 유효시간(초): Access 30분, Refresh 7일. secret은 config/application.yml 공통.
+jwt:
+  access-token-validity: 1800
+  refresh-token-validity: 604800
+
+logging:
+  level:
+    root: INFO
+    org.coupon.userservice: DEBUG
+    org.springframework.security: DEBUG
