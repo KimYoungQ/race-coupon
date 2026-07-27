@@ -85,7 +85,12 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("PERCENT 쿠폰: 팩토리 base(정률) + 최대 한도")
         void percentBaseWithCap() {
-            Coupon coupon = Coupon.create("정률 쿠폰", 100L, DiscountType.PERCENT, 20L);
+            Coupon coupon = Coupon.builder()
+                    .title("정률 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(20L)
+                    .build();
 
             DiscountPolicy base = DiscountPolicyFactory.create(coupon); // RateDiscountPolicy(20)
             DiscountPolicy policy = new MaxDiscountDecorator(base, 30000L);
@@ -97,7 +102,12 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("FIXED_AMOUNT 쿠폰: 팩토리 base(정액) + 최대 한도")
         void fixedBaseWithCap() {
-            Coupon coupon = Coupon.create("정액 쿠폰", 100L, DiscountType.FIXED_AMOUNT, 50000L);
+            Coupon coupon = Coupon.builder()
+                    .title("정액 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.FIXED_AMOUNT)
+                    .discountValue(50000L)
+                    .build();
 
             DiscountPolicy base = DiscountPolicyFactory.create(coupon); // FixDiscountPolicy(50000)
             DiscountPolicy policy = new MaxDiscountDecorator(base, 30000L);
@@ -109,7 +119,12 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("전략 + 최대 한도 + 최소 주문을 모두 겹쳐 적용한다")
         void fullStack() {
-            Coupon coupon = Coupon.create("정률 쿠폰", 100L, DiscountType.PERCENT, 20L);
+            Coupon coupon = Coupon.builder()
+                    .title("정률 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(20L)
+                    .build();
 
             DiscountPolicy policy = new MinOrderAmountDecorator(
                     new MaxDiscountDecorator(DiscountPolicyFactory.create(coupon), 30000L),
@@ -127,7 +142,12 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("조건 없는 쿠폰은 기본 전략만 적용한다")
         void noConditions() {
-            Coupon coupon = Coupon.create("정률 쿠폰", 100L, DiscountType.PERCENT, 10L);
+            Coupon coupon = Coupon.builder()
+                    .title("정률 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(10L)
+                    .build();
 
             assertThat(coupon.finalPrice(10000L)).isEqualTo(9000L); // 1,000 할인
         }
@@ -136,7 +156,14 @@ class DiscountDecoratorTest {
         @DisplayName("최대 한도·최소 주문 조건이 있으면 finalPrice가 자동으로 겹쳐 적용한다")
         void withConditions() {
             // 정률 20% + 최대 30,000 + 최소 주문 50,000
-            Coupon coupon = Coupon.create("조건 쿠폰", 100L, DiscountType.PERCENT, 20L, 30000L, 50000L);
+            Coupon coupon = Coupon.builder()
+                    .title("조건 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(20L)
+                    .maxDiscountAmount(30000L)
+                    .minOrderAmount(50000L)
+                    .build();
 
             // 200,000: 40,000 → 한도 30,000 → finalPrice 170,000
             assertThat(coupon.finalPrice(200000L)).isEqualTo(170000L);
@@ -147,7 +174,13 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("최소 주문 조건만 있는 쿠폰")
         void onlyMinOrder() {
-            Coupon coupon = Coupon.create("최소주문 쿠폰", 100L, DiscountType.PERCENT, 10L, null, 50000L);
+            Coupon coupon = Coupon.builder()
+                    .title("최소주문 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(10L)
+                    .minOrderAmount(50000L)
+                    .build();
 
             assertThat(coupon.finalPrice(60000L)).isEqualTo(54000L); // 6,000 할인
             assertThat(coupon.finalPrice(40000L)).isEqualTo(40000L); // 게이트 미달

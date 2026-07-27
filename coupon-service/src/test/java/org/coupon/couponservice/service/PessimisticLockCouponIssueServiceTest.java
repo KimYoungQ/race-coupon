@@ -34,7 +34,12 @@ class PessimisticLockCouponIssueServiceTest {
     void setUp() {
         issuedCouponRepository.deleteAllInBatch();
         couponRepository.deleteAllInBatch();
-        couponId = couponRepository.save(Coupon.create("선착순 쿠폰", 100L, DiscountType.PERCENT, 10L)).getId();
+        couponId = couponRepository.save(Coupon.builder()
+                .title("선착순 쿠폰")
+                .totalQuantity(100L)
+                .discountType(DiscountType.PERCENT)
+                .discountValue(10L)
+                .build()).getId();
     }
 
     @Test

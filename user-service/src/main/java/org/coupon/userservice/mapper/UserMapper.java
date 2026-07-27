@@ -9,7 +9,7 @@ import org.mapstruct.ReportingPolicy;
 
 /**
  * User Entity → Response DTO 변환. 구현체는 컴파일 시점에 생성된다.
- * Entity 생성은 인코딩된 비밀번호를 요구하는 {@link User#create}가 담당하므로 여기서 다루지 않는다.
+ * Entity 생성은 인코딩된 비밀번호를 요구하는 {@link User}의 빌더가 담당하므로 여기서 다루지 않는다.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {

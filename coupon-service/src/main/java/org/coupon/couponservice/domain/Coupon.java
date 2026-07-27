@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.coupon.couponservice.exception.CouponSoldOutException;
@@ -47,6 +48,10 @@ public class Coupon {
     /** 최소 주문 금액(선택). null이면 조건 없음. */
     private Long minOrderAmount;
 
+    /**
+     * maxDiscountAmount·minOrderAmount는 생략 가능하다(빌더 기본값 null = 조건 없음).
+     */
+    @Builder
     private Coupon(String title, Long totalQuantity, DiscountType discountType, Long discountValue,
                    Long maxDiscountAmount, Long minOrderAmount) {
         discountType.validate(discountValue);
@@ -57,15 +62,6 @@ public class Coupon {
         this.discountValue = discountValue;
         this.maxDiscountAmount = maxDiscountAmount;
         this.minOrderAmount = minOrderAmount;
-    }
-
-    public static Coupon create(String title, Long totalQuantity, DiscountType discountType, Long discountValue) {
-        return new Coupon(title, totalQuantity, discountType, discountValue, null, null);
-    }
-
-    public static Coupon create(String title, Long totalQuantity, DiscountType discountType, Long discountValue,
-                                Long maxDiscountAmount, Long minOrderAmount) {
-        return new Coupon(title, totalQuantity, discountType, discountValue, maxDiscountAmount, minOrderAmount);
     }
 
     /**

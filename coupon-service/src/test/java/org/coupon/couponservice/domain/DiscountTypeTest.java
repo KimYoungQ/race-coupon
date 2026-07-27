@@ -56,16 +56,26 @@ class DiscountTypeTest {
     }
 
     @Test
-    @DisplayName("Coupon.create는 유형별 불변식을 위반하면 InvalidDiscountException을 던진다")
+    @DisplayName("Coupon 빌더는 유형별 불변식을 위반하면 InvalidDiscountException을 던진다")
     void create_rejects_invalid_discount() {
-        assertThatThrownBy(() -> Coupon.create("잘못된 쿠폰", 100L, DiscountType.PERCENT, 0L))
+        assertThatThrownBy(() -> Coupon.builder()
+                .title("잘못된 쿠폰")
+                .totalQuantity(100L)
+                .discountType(DiscountType.PERCENT)
+                .discountValue(0L)
+                .build())
                 .isInstanceOf(InvalidDiscountException.class);
     }
 
     @Test
-    @DisplayName("Coupon.create는 유효한 할인 정보를 그대로 보관한다")
+    @DisplayName("Coupon 빌더는 유효한 할인 정보를 그대로 보관한다")
     void create_keeps_valid_discount() {
-        Coupon coupon = Coupon.create("정액 쿠폰", 100L, DiscountType.FIXED_AMOUNT, 3000L);
+        Coupon coupon = Coupon.builder()
+                .title("정액 쿠폰")
+                .totalQuantity(100L)
+                .discountType(DiscountType.FIXED_AMOUNT)
+                .discountValue(3000L)
+                .build();
 
         assertThat(coupon.getDiscountType()).isEqualTo(DiscountType.FIXED_AMOUNT);
         assertThat(coupon.getDiscountValue()).isEqualTo(3000L);

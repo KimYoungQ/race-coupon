@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -34,13 +35,10 @@ public class IssuedCoupon {
     @Column(nullable = false)
     private LocalDateTime issuedAt;
 
+    @Builder
     private IssuedCoupon(Long userId, Long couponId) {
         this.userId = userId;
         this.couponId = couponId;
         this.issuedAt = LocalDateTime.now();
-    }
-
-    public static IssuedCoupon create(Long userId, Long couponId) {
-        return new IssuedCoupon(userId, couponId);
     }
 }

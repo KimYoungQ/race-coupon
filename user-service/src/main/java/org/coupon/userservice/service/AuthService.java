@@ -61,11 +61,12 @@ public class AuthService {
         }
 
         // 평문 비밀번호는 여기서 즉시 해시로 바뀌며, 이후 어디에도 남기지 않는다.
-        User user = User.create(
-                request.getUsername(),
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword()),
-                UserRole.USER);
+        User user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .encodedPassword(passwordEncoder.encode(request.getPassword()))
+                .role(UserRole.USER)
+                .build();
         User saved = userRepository.save(user);
 
         log.info("회원가입 완료: userId={}, username={}", saved.getId(), saved.getUsername());
@@ -143,7 +144,11 @@ public class AuthService {
         refreshTokenRepository.findByUserId(userId)
                 .ifPresentOrElse(
                         stored -> stored.rotate(newToken, expiresAt),
-                        () -> refreshTokenRepository.save(RefreshToken.create(userId, newToken, expiresAt)));
+                        () -> refreshTokenRepository.save(RefreshToken.builder()
+                                .userId(userId)
+                                .token(newToken)
+                                .expiresAt(expiresAt)
+                                .build()));
     }
 
     /**

@@ -24,18 +24,19 @@ public class CouponAdminService {
     private final CouponMapper couponMapper;
 
     /**
-     * 할인 값 검증은 {@link Coupon#create}가 도메인 불변식으로 처리한다.
+     * 할인 값 검증은 {@link Coupon}의 빌더가 도메인 불변식으로 처리한다.
      * 범위를 벗어나면 InvalidDiscountException이 나고 전역 핸들러가 400으로 변환한다.
      */
     @Transactional
     public CouponResponse create(CouponCreateRequest request) {
-        Coupon coupon = Coupon.create(
-                request.title(),
-                request.totalQuantity(),
-                request.discountType(),
-                request.discountValue(),
-                request.maxDiscountAmount(),
-                request.minOrderAmount());
+        Coupon coupon = Coupon.builder()
+                .title(request.title())
+                .totalQuantity(request.totalQuantity())
+                .discountType(request.discountType())
+                .discountValue(request.discountValue())
+                .maxDiscountAmount(request.maxDiscountAmount())
+                .minOrderAmount(request.minOrderAmount())
+                .build();
 
         Coupon saved = couponRepository.save(coupon);
         log.info("쿠폰 등록 완료: couponId={}, title={}, totalQuantity={}",

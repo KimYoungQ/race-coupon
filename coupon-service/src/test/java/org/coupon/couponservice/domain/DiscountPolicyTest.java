@@ -40,7 +40,12 @@ class DiscountPolicyTest {
         @Test
         @DisplayName("PERCENT 쿠폰이면 RateDiscountPolicy를 만든다")
         void createRate() {
-            Coupon coupon = Coupon.create("정률 쿠폰", 100L, DiscountType.PERCENT, 10L);
+            Coupon coupon = Coupon.builder()
+                    .title("정률 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(10L)
+                    .build();
 
             DiscountPolicy policy = DiscountPolicyFactory.create(coupon);
 
@@ -51,7 +56,12 @@ class DiscountPolicyTest {
         @Test
         @DisplayName("FIXED_AMOUNT 쿠폰이면 FixDiscountPolicy를 만든다")
         void createFix() {
-            Coupon coupon = Coupon.create("정액 쿠폰", 100L, DiscountType.FIXED_AMOUNT, 3000L);
+            Coupon coupon = Coupon.builder()
+                    .title("정액 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.FIXED_AMOUNT)
+                    .discountValue(3000L)
+                    .build();
 
             DiscountPolicy policy = DiscountPolicyFactory.create(coupon);
 
@@ -67,18 +77,42 @@ class DiscountPolicyTest {
         @Test
         @DisplayName("PERCENT 쿠폰의 최종가")
         void percent() {
-            assertThat(Coupon.create("정률 쿠폰", 100L, DiscountType.PERCENT, 10L).finalPrice(10000L))
+            assertThat(Coupon.builder()
+                    .title("정률 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(10L)
+                    .build()
+                    .finalPrice(10000L))
                     .isEqualTo(9000L);
-            assertThat(Coupon.create("전액 쿠폰", 100L, DiscountType.PERCENT, 100L).finalPrice(10000L))
+            assertThat(Coupon.builder()
+                    .title("전액 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.PERCENT)
+                    .discountValue(100L)
+                    .build()
+                    .finalPrice(10000L))
                     .isEqualTo(0L);
         }
 
         @Test
         @DisplayName("FIXED_AMOUNT 쿠폰의 최종가는 0 미만으로 내려가지 않는다")
         void fixedAmount() {
-            assertThat(Coupon.create("정액 쿠폰", 100L, DiscountType.FIXED_AMOUNT, 3000L).finalPrice(10000L))
+            assertThat(Coupon.builder()
+                    .title("정액 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.FIXED_AMOUNT)
+                    .discountValue(3000L)
+                    .build()
+                    .finalPrice(10000L))
                     .isEqualTo(7000L);
-            assertThat(Coupon.create("큰 정액 쿠폰", 100L, DiscountType.FIXED_AMOUNT, 15000L).finalPrice(10000L))
+            assertThat(Coupon.builder()
+                    .title("큰 정액 쿠폰")
+                    .totalQuantity(100L)
+                    .discountType(DiscountType.FIXED_AMOUNT)
+                    .discountValue(15000L)
+                    .build()
+                    .finalPrice(10000L))
                     .isEqualTo(0L);
         }
     }

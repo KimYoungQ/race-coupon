@@ -25,7 +25,10 @@ public class CouponIssueService {
 
         coupon.issue();
         couponRepository.save(coupon);
-        issuedCouponRepository.save(IssuedCoupon.create(userId, couponId));
+        issuedCouponRepository.save(IssuedCoupon.builder()
+                .userId(userId)
+                .couponId(couponId)
+                .build());
 
         return couponMapper.toIssueResponse(coupon);
     }

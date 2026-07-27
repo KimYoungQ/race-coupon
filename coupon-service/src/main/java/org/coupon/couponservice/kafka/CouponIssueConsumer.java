@@ -22,7 +22,10 @@ public class CouponIssueConsumer {
         log.info("발급 메시지 소비: key={}, partition={}, offset={}, couponId={}, userId={}",
                 record.key(), record.partition(), record.offset(), message.couponId(), message.userId());
         try {
-            issuedCouponRepository.save(IssuedCoupon.create(message.userId(), message.couponId()));
+            issuedCouponRepository.save(IssuedCoupon.builder()
+                    .userId(message.userId())
+                    .couponId(message.couponId())
+                    .build());
             ack.acknowledge();
         } catch (Exception e) {
             log.error("발급 메시지 처리 실패: userId={}", message.userId(), e);

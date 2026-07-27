@@ -32,7 +32,10 @@ public class RedisCouponIssueService {
             throw new CouponSoldOutException();
         }
 
-        issuedCouponRepository.save(IssuedCoupon.create(userId, couponId));
+        issuedCouponRepository.save(IssuedCoupon.builder()
+                .userId(userId)
+                .couponId(couponId)
+                .build());
 
         return new CouponIssueResponse(couponId, count, totalQuantity - count);
     }
