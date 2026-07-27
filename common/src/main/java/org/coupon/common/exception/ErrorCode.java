@@ -17,7 +17,7 @@ public enum ErrorCode {
     // 쿠폰
     COUPON_NOT_FOUND("COUPON_NOT_FOUND", "쿠폰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     COUPON_SOLD_OUT("COUPON_SOLD_OUT", "쿠폰이 모두 소진되었습니다", HttpStatus.CONFLICT),
-    INVALID_STRATEGY("INVALID_STRATEGY", "지원하지 않는 발급 전략입니다", HttpStatus.BAD_REQUEST),
+    // INVALID_STRATEGY("INVALID_STRATEGY", "지원하지 않는 발급 전략입니다", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT("INVALID_DISCOUNT", "할인 정보가 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 
     // 인증 (user-service)

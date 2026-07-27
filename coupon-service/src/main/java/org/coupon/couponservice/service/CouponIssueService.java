@@ -1,5 +1,6 @@
 package org.coupon.couponservice.service;
 
+/*
 import lombok.RequiredArgsConstructor;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.IssuedCoupon;
@@ -43,3 +44,4 @@ public class CouponIssueService {
                 .orElseThrow(() -> new CouponNotFoundException(couponId));
     }
 }
+*/

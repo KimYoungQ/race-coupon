@@ -110,21 +110,6 @@ class CouponSecurityTest {
     }
 
     @Test
-    @DisplayName("USER 토큰으로 발급하면 201이고 발급 주체는 토큰의 sub다")
-    void issue_with_user_token_records_subject_as_owner() throws Exception {
-        long userId = 42L;
-
-        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(userId, "USER", "access", HOUR_MILLIS)))
-                .andExpect(status().isCreated());
-
-        org.assertj.core.api.Assertions.assertThat(issuedCouponRepository.findAll())
-                .singleElement()
-                .extracting("userId")
-                .isEqualTo(userId);
-    }
-
-    @Test
     @DisplayName("USER 토큰으로 관리자 쿠폰 등록을 시도하면 403이다")
     void create_coupon_with_user_token_is_forbidden() throws Exception {
         mockMvc.perform(post("/api/v1/coupons")

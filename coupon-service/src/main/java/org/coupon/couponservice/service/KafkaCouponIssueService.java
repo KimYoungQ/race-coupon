@@ -9,19 +9,21 @@ import org.coupon.couponservice.kafka.CouponIssueMessage;
 import org.coupon.couponservice.kafka.CouponIssueProducer;
 import org.coupon.couponservice.repository.CouponCountRedisRepository;
 import org.coupon.couponservice.repository.CouponRepository;
+import org.coupon.couponservice.repository.IssuedCouponRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class KafkaCouponIssueService {
 
     private final CouponRepository couponRepository;
+    private final IssuedCouponRepository issuedCouponRepository;
     private final CouponCountRedisRepository couponCountRedisRepository;
     private final CouponIssueProducer couponIssueProducer;
 
     public CouponIssueResponse issue(Long couponId, Long userId) {
-        Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new CouponNotFoundException(couponId));
+        Coupon coupon = getCoupon(couponId);
         long totalQuantity = coupon.getTotalQuantity();
 
         Long count = couponCountRedisRepository.increment(couponId);
@@ -33,5 +35,19 @@ public class KafkaCouponIssueService {
         couponIssueProducer.issue(new CouponIssueMessage(couponId, userId));
 
         return new CouponIssueResponse(couponId, count, totalQuantity - count);
+    }
+
+    @Transactional(readOnly = true)
+    public CouponIssueResponse getCouponInfo(Long couponId) {
+        Coupon coupon = getCoupon(couponId);
+        long totalQuantity = coupon.getTotalQuantity();
+        long issued = issuedCouponRepository.countByCouponId(couponId);
+
+        return new CouponIssueResponse(couponId, issued, totalQuantity - issued);
+    }
+
+    private Coupon getCoupon(Long couponId) {
+        return couponRepository.findById(couponId)
+                .orElseThrow(() -> new CouponNotFoundException(couponId));
     }
 }

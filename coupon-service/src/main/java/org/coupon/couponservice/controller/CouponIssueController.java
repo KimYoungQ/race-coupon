@@ -4,13 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueResponse;
-import org.coupon.common.exception.BusinessException;
-import org.coupon.common.exception.ErrorCode;
-import org.coupon.couponservice.service.CouponIssueService;
-import org.coupon.couponservice.service.KafkaCouponIssueService;
-import org.coupon.couponservice.service.PessimisticLockCouponIssueService;
 import org.coupon.couponservice.security.AuthenticatedUser;
-import org.coupon.couponservice.service.RedisCouponIssueService;
+import org.coupon.couponservice.service.KafkaCouponIssueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -27,9 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CouponIssueController implements CouponIssueControllerApi {
 
-    private final CouponIssueService couponIssueService;
-    private final PessimisticLockCouponIssueService pessimisticLockCouponIssueService;
-    private final RedisCouponIssueService redisCouponIssueService;
     private final KafkaCouponIssueService kafkaCouponIssueService;
 
     /**
@@ -40,22 +31,16 @@ public class CouponIssueController implements CouponIssueControllerApi {
     @PostMapping("/{couponId}/issue")
     public ResponseEntity<ApiResponse<CouponIssueResponse>> issue(
             @PathVariable Long couponId,
-            @AuthenticationPrincipal AuthenticatedUser user,
-            @RequestParam(defaultValue = "pessimistic") String strategy) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
         Long userId = user.getUserId();
-        log.info("쿠폰 발급 요청: couponId={}, userId={}, strategy={}", couponId, userId, strategy);
-        CouponIssueResponse response = switch (strategy) {
-            case "none" -> couponIssueService.issue(couponId, userId);
-            case "pessimistic" -> pessimisticLockCouponIssueService.issue(couponId, userId);
-            case "redis" -> redisCouponIssueService.issue(couponId, userId);
-            case "kafka" -> kafkaCouponIssueService.issue(couponId, userId);
-            default -> throw new BusinessException(ErrorCode.INVALID_STRATEGY, "지원하지 않는 전략입니다: " + strategy);
-        };
+        log.info("쿠폰 발급 요청: couponId={}, userId={}", couponId, userId);
+        CouponIssueResponse response = kafkaCouponIssueService.issue(couponId, userId);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
     @GetMapping("/{couponId}")
     public ResponseEntity<ApiResponse<CouponIssueResponse>> getCoupon(@PathVariable Long couponId) {
-        return ResponseEntity.ok(ApiResponse.success(couponIssueService.getCouponInfo(couponId)));
+        return ResponseEntity.ok(ApiResponse.success(kafkaCouponIssueService.getCouponInfo(couponId)));
     }
 }

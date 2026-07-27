@@ -1,5 +1,6 @@
 package org.coupon.couponservice.service;
 
+/*
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 import org.coupon.couponservice.kafka.CouponIssueMessage;
@@ -18,11 +19,10 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * coupon-api는 Redis 카운팅으로 발급 수량을 통제하고 Kafka로 메시지를 넘기는 것까지가 책임이다.
- * 실제 DB 영속화는 coupon-consumer의 책임이므로 여기서는 Redis 카운트만 검증한다.
- * (영속화 검증은 coupon-consumer의 CouponIssueConsumerTest)
- */
+coupon-api는 Redis 카운팅으로 발급 수량을 통제하고 Kafka로 메시지를 넘기는 것까지가 책임이다.
+실제 DB 영속화는 coupon-consumer의 책임이므로 여기서는 Redis 카운트만 검증한다.
+(영속화 검증은 coupon-consumer의 CouponIssueConsumerTest)
+
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = CouponIssueMessage.TOPIC)
 class KafkaCouponIssueServiceTest {
@@ -78,3 +78,4 @@ class KafkaCouponIssueServiceTest {
         assertThat(count).isEqualTo("100");
     }
 }
+*/

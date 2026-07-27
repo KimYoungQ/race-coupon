@@ -18,17 +18,7 @@ import static org.awaitility.Awaitility.await;
  * coupon-consumer의 책임: 토픽에 올라온 발급 메시지를 소비해 IssuedCoupon으로 영속화한다.
  * 실제 인프라 없이 검증하도록 임베디드 Kafka + 인메모리 H2를 사용한다.
  */
-@SpringBootTest(properties = {
-        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
-        "spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer",
-        "spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer",
-        "spring.datasource.url=jdbc:h2:mem:coupon_consumer;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "spring.jpa.hibernate.ddl-auto=create",
-        "spring.sql.init.mode=never"
-})
+@SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = CouponIssueMessage.TOPIC)
 class CouponIssueConsumerTest {
 
@@ -47,7 +37,7 @@ class CouponIssueConsumerTest {
     @DisplayName("토픽에 올라온 발급 메시지를 소비해 IssuedCoupon으로 저장한다")
     void consume_and_persist() {
         // given
-        long couponId = 1L;
+        long couponId = 999_999L;
         long userId = 42L;
 
         // when
