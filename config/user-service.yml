@@ -9,7 +9,7 @@ spring:
   # JPA / Hibernate — 계정은 재기동에도 살아남아야 하므로 update
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
