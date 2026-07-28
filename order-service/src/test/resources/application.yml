@@ -1,0 +1,46 @@
+# 테스트 전용 설정 — 외부 MySQL/.env 의존 제거(H2 인메모리)
+spring:
+  application:
+    name: order-service-test
+
+  # 이 파일이 main의 application.yml을 가리므로 configserver: import가 없다.
+  # starter-config는 import가 없으면 기동을 거부하므로(ImportException) 명시적으로 끈다.
+  cloud:
+    config:
+      enabled: false
+
+  # H2 인메모리 (MySQL 호환 모드)
+  datasource:
+    url: "jdbc:h2:mem:order;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    # 운영과 같은 값으로 둔다. true면 트랜잭션 밖 LAZY 접근이 테스트에서만 성공해버린다.
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        default_batch_fetch_size: 100
+
+  sql:
+    init:
+      mode: never
+
+# 운영 키와 무관한 테스트 전용 더미. 값은 있어야 한다(HS256 최소 32바이트).
+jwt:
+  secret: test-only-secret-key-for-hs256-minimum-32-bytes
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    org.coupon.orderservice: INFO

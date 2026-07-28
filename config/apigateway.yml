@@ -17,6 +17,18 @@ spring:
               predicates:
                 - Path=/api/v1/auth/**,/api/v1/users/**
 
+            # ===== 상품 서비스 =====
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/api/v1/products/**
+
+            # ===== 주문 서비스 =====
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/v1/orders/**
+
             # ===== Swagger 문서 집계 =====
             # /v3/api-docs/{service} 를 각 서비스의 /v3/api-docs 로 프록시한다.
             # /v3/api-docs/** 는 SecurityConfig에서 이미 열려 있어 별도 permitAll이 필요 없다.
@@ -34,6 +46,20 @@ spring:
               filters:
                 - RewritePath=/v3/api-docs/user-service,/v3/api-docs
 
+            - id: product-service-docs
+              uri: lb://product-service
+              predicates:
+                - Path=/v3/api-docs/product-service
+              filters:
+                - RewritePath=/v3/api-docs/product-service,/v3/api-docs
+
+            - id: order-service-docs
+              uri: lb://order-service
+              predicates:
+                - Path=/v3/api-docs/order-service
+              filters:
+                - RewritePath=/v3/api-docs/order-service,/v3/api-docs
+
 # 통합 Swagger UI: http://localhost:8080/swagger-ui.html 에서 드롭다운으로 서비스 문서 전환
 springdoc:
   swagger-ui:
@@ -44,6 +70,10 @@ springdoc:
         url: /v3/api-docs/coupon-service
       - name: user-service
         url: /v3/api-docs/user-service
+      - name: product-service
+        url: /v3/api-docs/product-service
+      - name: order-service
+        url: /v3/api-docs/order-service
 
 management:
   endpoints:
