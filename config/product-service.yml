@@ -2,13 +2,20 @@ spring:
   # Datasource (MySQL) — Database per Service: product_service 스키마
   datasource:
     url: "jdbc:mysql://localhost:3306/product_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    username: cpuser
+    password: cppass
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: ProductHikariCP
+      # 배경 스레드 5개 — 리스너 1개×concurrency 3 + 스케줄러 pool 2.
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
 
   # Kafka — 재고 예약/복구 커맨드 소비, 리플라이 발행
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092,localhost:9192,localhost:9292
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -17,19 +24,32 @@ spring:
       properties:
         linger.ms: 0
         enable.idempotence: true
+        # 근거는 config/order-service.yml 참조.
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 45000
+        max.block.ms: 3000
+        retry.backoff.ms: 200
     consumer:
-      group-id: stock-reserve
+      group-id: product-saga
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      max-poll-records: 100
       properties:
         spring.json.trusted.packages: org.coupon.common.event
         partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
         max.poll.interval.ms: 300000
+        allow.auto.create.topics: false
     listener:
       ack-mode: manual
       concurrency: 3
+
+  # Outbox 스케줄러가 기본 풀(스레드 1개)을 다른 작업과 다투지 않도록 분리한다.
+  task:
+    scheduling:
+      pool:
+        size: 2
 
   # JPA / Hibernate
   jpa:
@@ -48,6 +68,12 @@ spring:
     init:
       mode: always
       encoding: UTF-8
+
+# 응답 Outbox 발행 재시도 주기. 정상 경로는 커밋 직후 즉시 발행된다.
+product-service:
+  outbox:
+    fixed-delay: 5000
+    initial-delay: 10000
 
 logging:
   level:

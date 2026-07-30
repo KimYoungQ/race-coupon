@@ -2,8 +2,8 @@ spring:
   # Datasource (MySQL) — Database per Service: coupon_service와 분리된 user_service 스키마
   datasource:
     url: "jdbc:mysql://localhost:3306/user_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    username: cpuser
+    password: cppass
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA / Hibernate — 계정은 재기동에도 살아남아야 하므로 update

@@ -1,20 +1,37 @@
 spring:
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  # 프리픽스가 spring.jackson 이 아니라 spring.jackson2 다.
+  # Boot 4.1은 Jackson이 두 벌이다 — starter-webmvc가 Jackson 3(tools.jackson.*, spring.jackson.*),
+  # eureka-client가 끌고 오는 spring-boot-jackson2가 Jackson 2(com.fasterxml.*, spring.jackson2.*)다.
+  # 누가 spring.jackson 으로 "고치지" 않도록 이 주석을 지우지 말 것.
+  #
+  # 주의: 이 설정은 컨텍스트의 Jackson 2 ObjectMapper 빈에만 적용된다.
+  # spring-kafka의 JsonSerializer/JsonDeserializer는 Kafka 클라이언트가 클래스명으로
+  # 리플렉션 생성하므로 JacksonUtils.enhancedObjectMapper()로 자기 매퍼를 따로 만든다 —
+  # 여기 설정이 도달하지 않는다. Saga payload 직렬화는 SagaJacksonConfig의 전용 매퍼가 담당한다.
+  jackson2:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: http://localhost:8761/eureka/
     refresh:
       enable: false
   instance:
     prefer-ip-address: true
 
 jwt:
+  # 유일한 플레이스홀더. 각 서비스가 저장소 루트의 .env에서 해석한다.
+  # .env가 없으면 이 설정을 받는 5개 모듈이 전부 기동 실패한다.
   secret: ${JWT_SECRET}
 
 management:

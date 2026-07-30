@@ -3,14 +3,16 @@ services:
     image: mysql:8.0
     container_name: coupon-mysql
     restart: unless-stopped
+    networks: [ coupon-net ]
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      TZ: ${TZ:-Asia/Seoul}
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: coupon_service
+      # docker/mysql/init/init.sql의 GRANT 대상이 'cpuser'@'%'로 고정돼 있다.
+      MYSQL_USER: cpuser
+      MYSQL_PASSWORD: cppass
+      TZ: Asia/Seoul
     volumes:
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
     command:
@@ -22,66 +24,180 @@ services:
     image: redis:7-alpine
     container_name: coupon-redis
     restart: unless-stopped
+    networks: [ coupon-net ]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:4-management
     container_name: coupon-rabbitmq
     restart: unless-stopped
+    networks: [ coupon-net ]
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_UI_PORT:-15672}:15672"
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  kafka:
+  kafka-1:
     image: apache/kafka:3.8.0
-    container_name: coupon-kafka
+    container_name: coupon-kafka-1
+    hostname: kafka-1
     restart: unless-stopped
+    networks: [ coupon-net ]
     ports:
-      - "${KAFKA_PORT:-9092}:9092"
+      - "9092:9092"
     environment:
-      # KRaft 단일 노드 설정
+      # 3노드가 같은 값을 공유해야 한다. 다르면 각자 다른 클러스터로 포맷되어 quorum이 형성되지 않는다.
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
       KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: controller,broker
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
-      # 리스너 2개:
+      # 리스너 3개:
       #   - PLAINTEXT://:9092       → 외부(호스트) 접속용
-      #   - INTERNAL://:29092       → 도커 네트워크 내부(Kafka UI 등)
+      #   - INTERNAL://:29092       → 도커 네트워크 내부(inter-broker, Kafka UI, kafka-init)
+      #   - CONTROLLER://:9093      → KRaft quorum
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      # PLAINTEXT에는 호스트 publish 포트를 적는다. 아래 ports 매핑과 반드시 짝을 이룬다.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka-1:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
 
-      # 학습용이라 복제·기본값을 1로
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      # acks=all의 의미를 결정하는 값. 1이면 acks=all이 사실상 acks=1이 된다.
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_NUM_PARTITIONS: 3
+      # 이미지 기본값은 /tmp/kraft-combined-logs다. 볼륨 마운트 지점과 맞춘다.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
     healthcheck:
       test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
+  kafka-2:
+    image: apache/kafka:3.8.0
+    container_name: coupon-kafka-2
+    hostname: kafka-2
+    restart: unless-stopped
+    networks: [ coupon-net ]
+    ports:
+      - "9192:9092"
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9192,INTERNAL://kafka-2:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka-3:
+    image: apache/kafka:3.8.0
+    container_name: coupon-kafka-3
+    hostname: kafka-3
+    restart: unless-stopped
+    networks: [ coupon-net ]
+    ports:
+      - "9292:9092"
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9292,INTERNAL://kafka-3:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # 토픽 9개(사가 4 + 발급 1 + DLT 4)를 만든다.
+  # auto-create를 껐으므로 이 컨테이너가 토픽 형상의 정본이다.
+  kafka-init:
+    image: apache/kafka:3.8.0
+    container_name: coupon-kafka-init
+    restart: "no"
+    networks: [ coupon-net ]
+    depends_on:
+      kafka-1: { condition: service_healthy }
+      kafka-2: { condition: service_healthy }
+      kafka-3: { condition: service_healthy }
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic product-request --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic product-response --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic coupon-request --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic coupon-response --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic coupon-issue --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic product-request.DLT --partitions 3 --replication-factor 3 --config min.insync.replicas=1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic product-response.DLT --partitions 3 --replication-factor 3 --config min.insync.replicas=1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic coupon-request.DLT --partitions 3 --replication-factor 3 --config min.insync.replicas=1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:29092 --create --if-not-exists --topic coupon-response.DLT --partitions 3 --replication-factor 3 --config min.insync.replicas=1
+
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: coupon-kafka-ui
     restart: unless-stopped
+    networks: [ coupon-net ]
     ports:
-      - "${KAFKA_UI_PORT:-8090}:8080"
+      # 8080은 apigateway, 8081은 coupon-service가 쓴다.
+      - "8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: coupon-cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      # 3대를 다 적는다. 1대를 죽여도 UI가 붙어 있어야 장애 주입을 관찰할 수 있다.
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
       DYNAMIC_CONFIG_ENABLED: "true"
     depends_on:
-      - kafka
+      kafka-1: { condition: service_healthy }
+      kafka-2: { condition: service_healthy }
+      kafka-3: { condition: service_healthy }
+
+networks:
+  coupon-net:
+    name: coupon-net
