@@ -1,0 +1,13 @@
+# Saga/Outbox 검증 profile.
+#
+# 기본 profile은 ddl-auto: create라 기동할 때마다 스키마를 날린다. 그런데 Outbox의 존재 이유가
+# "발행 실패와 프로세스 재기동 후 재발행"이므로, 재기동이 곧 전체 삭제이면 그 가치를 시연할 수 없다.
+# 유실 시나리오(응답 유실 / 요청 유실)를 검증할 때 이 profile로 띄운다.
+#
+#   ./gradlew :order-service:bootRun --args='--spring.profiles.active=saga-test'
+#
+# 매번 손으로 ddl-auto를 바꾸는 절차는 반드시 잊히므로 profile로 분리한다.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update

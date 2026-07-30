@@ -32,6 +32,34 @@ spring:
     init:
       mode: never
 
+  # Kafka — 사가 오케스트레이터라 리스너·프로듀서가 둘 다 있다.
+  # 브로커 없이도 컨텍스트가 뜨도록 기본값을 두고, 리스너는 auto-startup을 꺼서
+  # contextLoads가 존재하지 않는 브로커에 재연결을 시도하며 로그를 더럽히지 않게 한다.
+  # Saga 통합 테스트는 @EmbeddedKafka가 bootstrap을 덮어쓰고 컨테이너를 직접 기동한다.
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-saga
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: org.coupon.common.event
+    listener:
+      auto-startup: false
+
+# 백그라운드 타이머를 사실상 꺼둔다. 발행 검증은 타이머를 기다리는 대신 테스트가
+# 스케줄러 메서드를 직접 호출해서 한다 — 그래야 결정적이고 빠르다.
+# 타이머가 함께 돌면 같은 row를 두 번 발행해 관측이 흔들린다.
+order-service:
+  outbox:
+    fixed-delay: 3600000
+    initial-delay: 3600000
+
 # 운영 키와 무관한 테스트 전용 더미. 값은 있어야 한다(HS256 최소 32바이트).
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes

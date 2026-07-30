@@ -39,6 +39,10 @@ subprojects {
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
+        // record 컴포넌트 이름을 클래스파일에 남긴다. common은 java-library만 적용돼
+        // Boot 플러그인이 자동으로 넣어주는 -parameters가 빠지는데, 그러면 common/event의
+        // record가 arg0, arg1로 바인딩돼 Kafka JSON 역직렬화가 실패한다.
+        options.compilerArgs << '-parameters'
     }
 
     tasks.named('test') {

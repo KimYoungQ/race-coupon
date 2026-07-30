@@ -57,7 +57,7 @@ public interface OrderControllerApi {
             @RequestBody(description = "주문 생성 요청", required = true,
                     content = @Content(schema = @Schema(implementation = OrderCreateRequest.class),
                             examples = @ExampleObject(value = """
-                                    {"productId":1,"quantity":2,"issuedCouponId":10}""")))
+                                    {"productId":1,"quantity":2,"couponId":10}""")))
             @Valid OrderCreateRequest request,
             @Parameter(hidden = true) AuthenticatedUser user);
 
@@ -67,7 +67,7 @@ public interface OrderControllerApi {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":true,"data":[{"orderId":1,"status":"COMPLETED","issuedCouponId":10,"totalAmount":20000,"discountAmount":2000,"finalAmount":18000,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:02","items":[{"productId":1,"productName":"무선 이어폰","unitPrice":10000,"quantity":2}]}],"errorCode":null,"errorMessage":null}"""))),
+                            {"success":true,"data":[{"orderId":1,"status":"COMPLETED","couponId":10,"totalAmount":20000,"discountAmount":2000,"finalAmount":18000,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:02","items":[{"productId":1,"productName":"무선 이어폰","unitPrice":10000,"quantity":2}]}],"errorCode":null,"errorMessage":null}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                             {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}""")))
@@ -86,7 +86,7 @@ public interface OrderControllerApi {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":true,"data":{"orderId":1,"status":"CREATED","issuedCouponId":null,"totalAmount":0,"discountAmount":0,"finalAmount":0,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:00","items":[{"productId":1,"productName":null,"unitPrice":null,"quantity":2}]},"errorCode":null,"errorMessage":null}"""))),
+                            {"success":true,"data":{"orderId":1,"status":"CREATED","couponId":null,"totalAmount":0,"discountAmount":0,"finalAmount":0,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:00","items":[{"productId":1,"productName":null,"unitPrice":null,"quantity":2}]},"errorCode":null,"errorMessage":null}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                             {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}"""))),

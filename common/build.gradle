@@ -20,4 +20,8 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.assertj:assertj-core'
+    // Saga DTO 계약 테스트 전용. Schema Registry가 없으므로 필드명·enum 값·JSON 형식이 곧 계약이고,
+    // 그 계약이 리뷰 없이 바뀌지 못하도록 직렬화 결과를 고정한다. test 스코프라 apigateway 런타임에 새지 않는다.
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 }

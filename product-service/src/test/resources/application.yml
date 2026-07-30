@@ -51,6 +51,15 @@ spring:
         spring.json.trusted.packages: org.coupon.common.event
     listener:
       ack-mode: manual
+      # 브로커 없이도 컨텍스트가 뜨도록 리스너를 자동 기동하지 않는다.
+      # Saga 테스트는 필요할 때 직접 서비스/스케줄러를 호출하거나 @EmbeddedKafka로 띄운다.
+      auto-startup: false
+
+# 백그라운드 타이머를 사실상 꺼둔다. 발행 검증은 스케줄러를 직접 호출해서 한다.
+product-service:
+  outbox:
+    fixed-delay: 3600000
+    initial-delay: 3600000
 
 # Eureka — 테스트에서 레지스트리를 찾지 않는다
 eureka:

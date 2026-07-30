@@ -39,7 +39,10 @@ public enum ErrorCode {
     // 쿠폰 사용
     COUPON_NOT_OWNED("COUPON_NOT_OWNED", "본인의 쿠폰이 아닙니다", HttpStatus.FORBIDDEN),
     COUPON_ALREADY_USED("COUPON_ALREADY_USED", "이미 사용된 쿠폰입니다", HttpStatus.CONFLICT),
-    COUPON_MIN_ORDER_AMOUNT_NOT_MET("COUPON_MIN_ORDER_AMOUNT_NOT_MET", "최소 주문 금액을 충족하지 않습니다", HttpStatus.CONFLICT);
+    COUPON_MIN_ORDER_AMOUNT_NOT_MET("COUPON_MIN_ORDER_AMOUNT_NOT_MET", "최소 주문 금액을 충족하지 않습니다", HttpStatus.CONFLICT),
+    // 발급 API의 201은 Redis 수량 확보와 메시지 발행 요청까지만 뜻한다. IssuedCoupon row는
+    // 컨슈머가 비동기로 만들므로, 발급 직후 주문하면 아직 없을 수 있다. 조금 뒤 재주문하면 성공한다.
+    COUPON_NOT_ISSUED_YET("COUPON_NOT_ISSUED_YET", "쿠폰 발급이 아직 반영되지 않았습니다", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

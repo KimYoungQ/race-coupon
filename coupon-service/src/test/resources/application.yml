@@ -53,6 +53,17 @@ spring:
     listener:
       ack-mode: manual
 
+# 주문 사가 설정 — 발급 경로와 무관하다.
+# 사가 리스너만 끈다. 전역 auto-startup을 쓰면 발급 컨슈머까지 멈춰 CouponIssueConsumerTest가 깨진다.
+# 발행 검증은 타이머를 기다리는 대신 스케줄러를 직접 호출해서 한다.
+coupon-service:
+  saga:
+    listener:
+      auto-startup: false
+  outbox:
+    fixed-delay: 3600000
+    initial-delay: 3600000
+
 # JWT — 운영 키와 무관한 테스트 전용 더미. 값은 있어야 한다(HS256 최소 32바이트).
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes

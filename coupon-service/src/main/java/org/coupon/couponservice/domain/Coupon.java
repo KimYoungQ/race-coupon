@@ -92,4 +92,29 @@ public class Coupon {
         long discount = DiscountPolicyFactory.create(this).discount(price);
         return Math.max(0, price - discount);
     }
+
+    /**
+     * 이 쿠폰의 <b>실효</b> 할인액. {@link #finalPrice(long)}와 항상 정합한다.
+     *
+     * <p>{@code DiscountPolicyFactory.create(this).discount(price)}를 직접 쓰면 안 된다 —
+     * 그 값에는 0 하한이 없어서 원가를 넘어설 수 있다. 예를 들어 원가 1,000원에
+     * 5,000원 정액 쿠폰이면 정책은 5000을 돌려주지만 실제 최종가는 0원이다.
+     * 사가 응답에 {@code discountAmount}와 {@code finalAmount}를 함께 실어야 하는데
+     * 그대로 실으면 {@code total=1000, discount=5000, final=0}이라는 맞지 않는 조합이 나간다.
+     */
+    public long discountFor(long price) {
+        return price - finalPrice(price);
+    }
+
+    /**
+     * 최소 주문 금액 충족 여부.
+     *
+     * <p>{@link MinOrderAmountDecorator}는 미달 시 예외 없이 할인 0을 돌려준다. 그 동작은
+     * "쿠폰을 적용하면 얼마인가" 조회에는 맞지만 <b>사가에서는 맞지 않는다</b> —
+     * 조용히 할인 0으로 주문이 완료되면 사용자는 이유를 모르는데 쿠폰은 소진된다.
+     * 사가는 이 메서드로 먼저 판정해 명시적으로 실패시킨다. 데코레이터는 그대로 둔다.
+     */
+    public boolean satisfiesMinOrderAmount(long price) {
+        return minOrderAmount == null || price >= minOrderAmount;
+    }
 }
