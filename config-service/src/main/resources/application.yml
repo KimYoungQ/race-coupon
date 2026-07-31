@@ -10,7 +10,9 @@ spring:
     config:
       server:
         native:
-          search-locations: file:./config
+          # bootRun의 작업 디렉터리가 config-service/ 이므로 ../config = 저장소 루트의 config/.
+          # 운영에서는 SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS로 절대경로를 준다.
+          search-locations: file:../config
 
 management:
   endpoints:

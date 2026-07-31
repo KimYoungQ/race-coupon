@@ -55,17 +55,3 @@ dependencies {
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.springframework.security:spring-security-test'
 }
-
-// logback-spring.xml의 logs/가 작업 디렉터리 기준 상대경로다. 루트로 맞추지 않으면
-// 모듈마다 다른 곳에 로그가 흩어진다.
-tasks.named('bootRun') {
-    workingDir = rootProject.projectDir
-}
-
-// 엔티티가 전부 LocalDateTime.now()라 JVM 기본 타임존에 의존한다. DB URL은 이미
-// serverTimezone=Asia/Seoul로 고정돼 있으므로 JVM도 맞춰 둔다 — 서비스마다 타임존이
-// 갈리면 서비스 간 시각 비교가 예외 없이 조용히 어긋난다.
-// (Spring 서비스는 컨테이너가 아니라 호스트에서 뜨므로 docker-compose의 TZ가 닿지 않는다)
-tasks.named('bootRun') {
-    jvmArgs '-Duser.timezone=Asia/Seoul'
-}
