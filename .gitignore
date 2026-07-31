@@ -37,6 +37,7 @@ out/
 .vscode/
 
 .env
+logs/
 .omc/
 benchmark/*
 !benchmark/k6/

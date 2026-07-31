@@ -61,8 +61,8 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
 }
 
-// .env(JWT_SECRET)가 저장소 루트에 있고 spring.config.import가 상대경로로 읽으므로
-// bootRun 작업 디렉터리를 루트로 맞춘다.
+// logback-spring.xml의 logs/가 작업 디렉터리 기준 상대경로다. 루트로 맞추지 않으면
+// 모듈마다 다른 곳에 로그가 흩어진다.
 tasks.named('bootRun') {
     workingDir = rootProject.projectDir
 }
