@@ -6,6 +6,7 @@ import org.coupon.common.event.CouponResponse;
 import org.coupon.common.event.SagaTopics;
 import org.coupon.orderservice.exception.InvalidOrderStateException;
 import org.coupon.orderservice.saga.OrderCouponSaga;
+import org.coupon.orderservice.saga.SagaTraceTag;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.listener.BatchListenerFailedException;
@@ -23,6 +24,7 @@ import java.util.List;
 public class CouponResponseListener {
 
     private final OrderCouponSaga orderCouponSaga;
+    private final SagaTraceTag sagaTraceTag;
 
     @KafkaListener(
             id = "order-coupon-saga",
@@ -33,7 +35,8 @@ public class CouponResponseListener {
         for (int index = 0; index < responses.size(); index++) {
             CouponResponse response = responses.get(index);
 
-            try {
+            // 시그니처를 그대로 두는 근거는 ProductResponseListener 참조.
+            try (var ignored = sagaTraceTag.open(SagaTraceTag.SAGA_CONSUME, response.sagaId())) {
                 dispatch(response);
             } catch (OptimisticLockingFailureException e) {
                 log.info("동시 중복 응답 무시: sagaId={}", response.sagaId());

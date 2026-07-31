@@ -8,6 +8,7 @@ import org.coupon.common.outbox.SagaStatus;
 import org.coupon.orderservice.domain.Order;
 import org.coupon.orderservice.domain.outbox.CouponOutbox;
 import org.coupon.orderservice.repository.CouponOutboxRepository;
+import org.coupon.orderservice.saga.SagaTraceTag;
 import org.coupon.orderservice.saga.SagaTypes;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class CouponOutboxHelper {
 
     private final CouponOutboxRepository couponOutboxRepository;
     private final SagaPayloadCodec sagaPayloadCodec;
+    private final SagaTraceTag sagaTraceTag;
 
     /**
      * 쿠폰 요청을 적재한다.
@@ -52,16 +54,18 @@ public class CouponOutboxHelper {
                 requestStatus,
                 Instant.now());
 
-        return couponOutboxRepository.save(CouponOutbox.builder()
-                .id(messageId)
-                .sagaId(order.getSagaId())
-                .orderId(order.getId())
-                .type(SagaTypes.ORDER_PROCESSING)
-                .payload(sagaPayloadCodec.serialize(request))
-                .orderStatus(order.getStatus())
-                .sagaStatus(sagaStatus)
-                .requestStatus(requestStatus)
-                .build());
+        try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_WRITE, order.getSagaId())) {
+            return couponOutboxRepository.save(CouponOutbox.builder()
+                    .id(messageId)
+                    .sagaId(order.getSagaId())
+                    .orderId(order.getId())
+                    .type(SagaTypes.ORDER_PROCESSING)
+                    .payload(sagaPayloadCodec.serialize(request))
+                    .orderStatus(order.getStatus())
+                    .sagaStatus(sagaStatus)
+                    .requestStatus(requestStatus)
+                    .build());
+        }
     }
 
     public Optional<CouponOutbox> findAwaiting(UUID sagaId, CouponOrderStatus requestStatus, SagaStatus expected) {

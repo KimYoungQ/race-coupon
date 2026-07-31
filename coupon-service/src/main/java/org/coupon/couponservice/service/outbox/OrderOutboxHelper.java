@@ -8,6 +8,7 @@ import org.coupon.common.event.CouponStatus;
 import org.coupon.common.outbox.OutboxStatus;
 import org.coupon.couponservice.domain.outbox.OrderOutbox;
 import org.coupon.couponservice.repository.OrderOutboxRepository;
+import org.coupon.couponservice.saga.SagaTraceTag;
 import org.coupon.couponservice.saga.SagaTypes;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,7 @@ public class OrderOutboxHelper {
 
     private final OrderOutboxRepository orderOutboxRepository;
     private final SagaPayloadCodec sagaPayloadCodec;
+    private final SagaTraceTag sagaTraceTag;
 
     /**
      * 이 요청을 이미 처리했는지 확인한다.
@@ -90,16 +92,18 @@ public class OrderOutboxHelper {
 
     private OrderOutbox save(CouponRequest request, CouponResponse response,
                              CouponStatus couponStatus, UUID messageId) {
-        return orderOutboxRepository.save(OrderOutbox.builder()
-                .id(messageId)
-                .sagaId(request.sagaId())
-                .orderId(request.orderId())
-                .type(SagaTypes.ORDER_PROCESSING)
-                .payload(sagaPayloadCodec.serialize(response))
-                .couponStatus(couponStatus)
-                // 어떤 요청에 대한 응답인지. 정상/보상 응답이 공존할 수 있게 하는 값이다.
-                .requestStatus(request.couponOrderStatus())
-                .build());
+        try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_WRITE, request.sagaId())) {
+            return orderOutboxRepository.save(OrderOutbox.builder()
+                    .id(messageId)
+                    .sagaId(request.sagaId())
+                    .orderId(request.orderId())
+                    .type(SagaTypes.ORDER_PROCESSING)
+                    .payload(sagaPayloadCodec.serialize(response))
+                    .couponStatus(couponStatus)
+                    // 어떤 요청에 대한 응답인지. 정상/보상 응답이 공존할 수 있게 하는 값이다.
+                    .requestStatus(request.couponOrderStatus())
+                    .build());
+        }
     }
 
     /** 아직 발행되지 않은 응답 전부. */

@@ -6,6 +6,9 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     // gateway actuator 엔드포인트(라우트 확인용)를 노출하려면 actuator가 필요하다.
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // 분산 추적 — 트레이스의 시작점. 게이트웨이가 traceparent를 만들어 다운스트림으로 넘긴다.
+    // WebFlux라도 별도 배선이 필요 없다(Boot가 Reactor 컨텍스트 전파를 자동 구성).
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
     // 게이트웨이는 JWT '검증'만 담당(발급은 user-service, 역할 판정은 각 서비스의 @PreAuthorize).
     // SecurityWebFilterChain + oauth2ResourceServer().jwt() 로 서명·만료를 검증한다.

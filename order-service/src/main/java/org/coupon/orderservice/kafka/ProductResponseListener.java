@@ -6,6 +6,7 @@ import org.coupon.common.event.SagaTopics;
 import org.coupon.common.event.StockResponse;
 import org.coupon.orderservice.exception.InvalidOrderStateException;
 import org.coupon.orderservice.saga.OrderProductSaga;
+import org.coupon.orderservice.saga.SagaTraceTag;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.listener.BatchListenerFailedException;
@@ -28,6 +29,7 @@ import java.util.List;
 public class ProductResponseListener {
 
     private final OrderProductSaga orderProductSaga;
+    private final SagaTraceTag sagaTraceTag;
 
     @KafkaListener(
             id = "order-product-saga",
@@ -38,7 +40,10 @@ public class ProductResponseListener {
         for (int index = 0; index < responses.size(); index++) {
             StockResponse response = responses.get(index);
 
-            try {
+            // sagaId는 payload에서 얻는다 — 헤더가 필요 없으므로 리스너 시그니처를 바꾸지 않는다.
+            // 배치 리스너에 @Headers 파라미터를 더하면 spring-kafka가 페이로드 인자를 판별하지 못해
+            // 리스너가 호출되지 않고 레코드가 DLT로 빠진다.
+            try (var ignored = sagaTraceTag.open(SagaTraceTag.SAGA_CONSUME, response.sagaId())) {
                 dispatch(response);
             } catch (OptimisticLockingFailureException e) {
                 // 다른 스레드가 같은 사가 전이를 이미 완료했다. 확인된 중복이다.

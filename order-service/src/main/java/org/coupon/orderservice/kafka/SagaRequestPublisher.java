@@ -6,6 +6,7 @@ import org.coupon.common.event.CouponRequest;
 import org.coupon.common.event.SagaTopics;
 import org.coupon.common.event.StockRequest;
 import org.coupon.orderservice.saga.SagaChannel;
+import org.coupon.orderservice.saga.SagaTraceTag;
 import org.coupon.orderservice.service.outbox.CouponOutboxHelper;
 import org.coupon.orderservice.service.outbox.OutboxPublishState;
 import org.coupon.orderservice.service.outbox.ProductOutboxHelper;
@@ -43,6 +44,7 @@ public class SagaRequestPublisher {
     private final ProductOutboxHelper productOutboxHelper;
     private final CouponOutboxHelper couponOutboxHelper;
     private final OutboxPublishState outboxPublishState;
+    private final SagaTraceTag sagaTraceTag;
 
     /**
      * 한 건을 발행한다. <b>예외를 밖으로 내보내지 않는다.</b>
@@ -91,7 +93,7 @@ public class SagaRequestPublisher {
             log.info("재고 요청 발행 시도: sagaId={}, orderId={}, requestStatus={}, outboxId={}",
                     request.sagaId(), request.orderId(), request.stockOrderStatus(), outboxId);
 
-            try {
+            try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_PUBLISH, request.sagaId())) {
                 send(SagaTopics.PRODUCT_REQUEST, stockKey(request), request, outboxId, SagaChannel.PRODUCT);
             } catch (Exception e) {
                 log.error("재고 요청 발행 실패: sagaId={}, orderId={}, productId={}, outboxId={}",
@@ -108,7 +110,7 @@ public class SagaRequestPublisher {
             log.info("쿠폰 요청 발행 시도: sagaId={}, orderId={}, requestStatus={}, outboxId={}",
                     request.sagaId(), request.orderId(), request.couponOrderStatus(), outboxId);
 
-            try {
+            try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_PUBLISH, request.sagaId())) {
                 send(SagaTopics.COUPON_REQUEST, couponKey(request), request, outboxId, SagaChannel.COUPON);
             } catch (Exception e) {
                 log.error("쿠폰 요청 발행 실패: sagaId={}, orderId={}, couponId={}, outboxId={}",

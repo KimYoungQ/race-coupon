@@ -198,6 +198,20 @@ services:
       kafka-2: { condition: service_healthy }
       kafka-3: { condition: service_healthy }
 
+  # Jaeger v2는 OTLP가 네이티브다. v1 all-in-one의 COLLECTOR_OTLP_ENABLED에 해당하는
+  # 활성화 플래그가 없으므로 environment 없이 그대로 4317/4318로 받는다.
+  jaeger:
+    image: jaegertracing/jaeger:2.10.0
+    container_name: coupon-jaeger
+    restart: unless-stopped
+    networks: [ coupon-net ]
+    ports:
+      # Spring 서비스는 컨테이너가 아니라 호스트에서 뜨므로 OTLP 포트를 publish해야 한다.
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP — 서비스가 쓰는 쪽(Boot 기본 transport가 HTTP)
+      # 8080~8084는 앱, 8090은 kafka-ui가 쓴다.
+      - "16686:16686"  # UI
+
 networks:
   coupon-net:
     name: coupon-net

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.event.SagaTopics;
 import org.coupon.common.event.StockRequest;
+import org.coupon.productservice.saga.SagaTraceTag;
 import org.coupon.productservice.service.StockSagaService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -30,6 +31,7 @@ import java.util.List;
 public class StockRequestListener {
 
     private final StockSagaService stockSagaService;
+    private final SagaTraceTag sagaTraceTag;
 
     @KafkaListener(
             id = "product-saga",
@@ -40,7 +42,10 @@ public class StockRequestListener {
         for (int index = 0; index < requests.size(); index++) {
             StockRequest request = requests.get(index);
 
-            try {
+            // sagaId는 payload에서 얻는다 — 헤더가 필요 없으므로 리스너 시그니처를 바꾸지 않는다.
+            // 배치 리스너에 @Headers 파라미터를 더하면 spring-kafka가 페이로드 인자를 판별하지 못해
+            // 리스너가 호출되지 않고 레코드가 DLT로 빠진다.
+            try (var ignored = sagaTraceTag.open(SagaTraceTag.SAGA_CONSUME, request.sagaId())) {
                 stockSagaService.handle(request);
             } catch (DataIntegrityViolationException e) {
                 // UNIQUE 위반 = 다른 스레드가 같은 요청을 먼저 처리하고 커밋했다.

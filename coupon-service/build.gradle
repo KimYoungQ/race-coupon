@@ -8,6 +8,9 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // 분산 추적 — Micrometer Observation → micrometer-tracing-bridge-otel → OTLP → Jaeger.
+    // 이 스타터 하나가 브리지와 OTLP exporter를 모두 끌고 온다(개별 선언 불필요).
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
     // 도메인·리포지토리(구 coupon-core가 담당하던 JPA/QueryDSL을 이 모듈이 직접 소유)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

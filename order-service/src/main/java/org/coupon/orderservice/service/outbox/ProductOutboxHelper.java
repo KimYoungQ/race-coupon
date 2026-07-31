@@ -9,6 +9,7 @@ import org.coupon.orderservice.domain.Order;
 import org.coupon.orderservice.domain.OrderItem;
 import org.coupon.orderservice.domain.outbox.ProductOutbox;
 import org.coupon.orderservice.repository.ProductOutboxRepository;
+import org.coupon.orderservice.saga.SagaTraceTag;
 import org.coupon.orderservice.saga.SagaTypes;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +33,7 @@ public class ProductOutboxHelper {
 
     private final ProductOutboxRepository productOutboxRepository;
     private final SagaPayloadCodec sagaPayloadCodec;
+    private final SagaTraceTag sagaTraceTag;
 
     /**
      * 재고 요청을 적재한다. 발행하지 않는다 — 커밋 전에 보내면 롤백된 요청이 이미 나가버리므로
@@ -54,16 +56,18 @@ public class ProductOutboxHelper {
                 requestStatus,
                 Instant.now());
 
-        return productOutboxRepository.save(ProductOutbox.builder()
-                .id(messageId)
-                .sagaId(order.getSagaId())
-                .orderId(order.getId())
-                .type(SagaTypes.ORDER_PROCESSING)
-                .payload(sagaPayloadCodec.serialize(request))
-                .orderStatus(order.getStatus())
-                .sagaStatus(sagaStatus)
-                .requestStatus(requestStatus)
-                .build());
+        try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_WRITE, order.getSagaId())) {
+            return productOutboxRepository.save(ProductOutbox.builder()
+                    .id(messageId)
+                    .sagaId(order.getSagaId())
+                    .orderId(order.getId())
+                    .type(SagaTypes.ORDER_PROCESSING)
+                    .payload(sagaPayloadCodec.serialize(request))
+                    .orderStatus(order.getStatus())
+                    .sagaStatus(sagaStatus)
+                    .requestStatus(requestStatus)
+                    .build());
+        }
     }
 
     /**

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.event.CouponResponse;
 import org.coupon.common.event.SagaTopics;
+import org.coupon.couponservice.saga.SagaTraceTag;
 import org.coupon.couponservice.service.outbox.OrderOutboxHelper;
 import org.coupon.couponservice.service.outbox.OrderOutboxPublishState;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -29,6 +30,7 @@ public class CouponResponsePublisher {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final OrderOutboxHelper orderOutboxHelper;
     private final OrderOutboxPublishState orderOutboxPublishState;
+    private final SagaTraceTag sagaTraceTag;
 
     /**
      * 한 건을 발행한다. <b>예외를 밖으로 내보내지 않는다.</b>
@@ -47,7 +49,7 @@ public class CouponResponsePublisher {
                 log.info("쿠폰 응답 발행 시도: sagaId={}, orderId={}, couponStatus={}, outboxId={}",
                         response.sagaId(), response.orderId(), response.couponStatus(), outboxId);
 
-                try {
+                try (var ignored = sagaTraceTag.open(SagaTraceTag.OUTBOX_PUBLISH, response.sagaId())) {
                     send(response, outboxId);
                 } catch (Exception e) {
                     log.error("쿠폰 응답 발행 실패: sagaId={}, orderId={}, couponId={}, outboxId={}",
