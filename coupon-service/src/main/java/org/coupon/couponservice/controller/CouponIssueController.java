@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
 import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.coupon.couponservice.security.AuthenticatedUser;
+import org.coupon.couponservice.service.CouponService;
 import org.coupon.couponservice.service.KafkaCouponIssueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/coupons")
@@ -23,6 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class CouponIssueController implements CouponIssueControllerApi {
 
     private final KafkaCouponIssueService kafkaCouponIssueService;
+    private final CouponService couponService;
+
+    @GetMapping("/issuable")
+    public ResponseEntity<ApiResponse<List<IssuableCouponResponse>>> getIssuableCoupons(
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(ApiResponse.success(couponService.findIssuable(user.getUserId())));
+    }
 
     /**
      * 발급 주체는 <b>이 서비스가 직접 검증한</b> 토큰의 {@code sub}에서만 얻는다.

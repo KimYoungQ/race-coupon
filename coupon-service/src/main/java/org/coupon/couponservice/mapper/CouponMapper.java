@@ -3,9 +3,12 @@ package org.coupon.couponservice.mapper;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.dto.CouponIssueResponse;
 import org.coupon.couponservice.dto.CouponResponse;
+import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 /**
  * Coupon Entity → Response DTO 변환. 구현체는 컴파일 시점에 생성된다.
@@ -32,4 +35,10 @@ public interface CouponMapper {
 
     @Mapping(target = "couponId", source = "id")
     CouponResponse toResponse(Coupon coupon);
+
+    @Mapping(target = "couponId", source = "id")
+    @Mapping(target = "remaining", expression = "java(coupon.remaining())")
+    IssuableCouponResponse toIssuableResponse(Coupon coupon);
+
+    List<IssuableCouponResponse> toIssuableResponses(List<Coupon> coupons);
 }

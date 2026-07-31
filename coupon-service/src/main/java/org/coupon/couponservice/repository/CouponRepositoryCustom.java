@@ -1,5 +1,10 @@
 package org.coupon.couponservice.repository;
 
+import org.coupon.couponservice.domain.Coupon;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
 public interface CouponRepositoryCustom {
 
     /**
@@ -13,6 +18,16 @@ public interface CouponRepositoryCustom {
      * @return 갱신된 row 수. 쿠폰이 없으면 0
      */
     long increaseIssuedQuantity(Long couponId);
+
+    /**
+     * {@code userId}가 지금 발급받을 수 있는 쿠폰. 이벤트가 진행 중이고, 재고가 남았고,
+     * 본인이 아직 받지 않은 것만 나온다.
+     *
+     * <p>재고는 {@code Coupon.issuedQuantity}로 판정한다. 컨슈머 랙만큼 뒤처지므로
+     * 방금 발급된 건이 잠깐 반영되지 않는다 — 그 사이 발급을 시도하면 409가 나는데,
+     * 목록은 스냅샷이고 최종 방어는 발급 API가 한다.
+     */
+    List<Coupon> findIssuableBy(Long userId, LocalDateTime now);
 
     /*
     Optional<Coupon> findWithPessimisticLockById(Long id);
