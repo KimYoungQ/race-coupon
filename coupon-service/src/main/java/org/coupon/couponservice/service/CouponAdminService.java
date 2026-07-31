@@ -36,6 +36,7 @@ public class CouponAdminService {
                 .discountValue(request.discountValue())
                 .maxDiscountAmount(request.maxDiscountAmount())
                 .minOrderAmount(request.minOrderAmount())
+                .eventEndAt(request.eventEndAt())
                 .build();
 
         Coupon saved = couponRepository.save(coupon);

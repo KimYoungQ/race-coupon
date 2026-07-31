@@ -31,6 +31,10 @@ public interface CouponAdminControllerApi {
                     - **PERCENT**: 정률(%), 할인 값 1~100
                     - **FIXED_AMOUNT**: 정액(원 차감), 할인 값 1 이상
 
+                    ### 필수 항목
+                    - **eventEndAt**: 발급 이벤트 종료 시각(미래). Redis 발급 키의 TTL이 여기서 역산되고,
+                      이 시각이 지나면 수량이 남아 있어도 발급을 거절한다.
+
                     ### 선택 항목
                     - **maxDiscountAmount**: 최대 할인 한도(원). 생략 시 한도 없음.
                     - **minOrderAmount**: 최소 주문 금액(원). 생략 시 조건 없음.
@@ -38,7 +42,7 @@ public interface CouponAdminControllerApi {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "등록 성공",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":true,"data":{"couponId":1,"title":"신규가입 10% 할인","totalQuantity":100,"issuedQuantity":0,"discountType":"PERCENT","discountValue":10,"maxDiscountAmount":5000,"minOrderAmount":10000},"errorCode":null,"errorMessage":null}"""))),
+                            {"success":true,"data":{"couponId":1,"title":"신규가입 10% 할인","totalQuantity":100,"issuedQuantity":0,"discountType":"PERCENT","discountValue":10,"maxDiscountAmount":5000,"minOrderAmount":10000,"eventEndAt":"2026-12-31T23:59:59"},"errorCode":null,"errorMessage":null}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패 또는 할인 값 범위 위반",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                             {"success":false,"data":null,"errorCode":"INVALID_DISCOUNT","errorMessage":"할인 정보가 올바르지 않습니다"}"""))),
@@ -53,6 +57,6 @@ public interface CouponAdminControllerApi {
             @RequestBody(description = "쿠폰 등록 요청", required = true,
                     content = @Content(schema = @Schema(implementation = CouponCreateRequest.class),
                             examples = @ExampleObject(value = """
-                                    {"title":"신규가입 10% 할인","totalQuantity":100,"discountType":"PERCENT","discountValue":10,"maxDiscountAmount":5000,"minOrderAmount":10000}""")))
+                                    {"title":"신규가입 10% 할인","totalQuantity":100,"discountType":"PERCENT","discountValue":10,"maxDiscountAmount":5000,"minOrderAmount":10000,"eventEndAt":"2026-12-31T23:59:59"}""")))
             @Valid CouponCreateRequest request);
 }

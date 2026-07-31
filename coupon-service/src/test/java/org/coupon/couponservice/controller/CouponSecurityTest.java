@@ -58,6 +58,7 @@ class CouponSecurityTest {
                 .totalQuantity(100L)
                 .discountType(DiscountType.PERCENT)
                 .discountValue(10L)
+                .eventEndAt(java.time.LocalDateTime.now().plusDays(1))
                 .build()).getId();
     }
 
@@ -143,9 +144,10 @@ class CouponSecurityTest {
                   "title": "관리자 등록 쿠폰",
                   "totalQuantity": 50,
                   "discountType": "PERCENT",
-                  "discountValue": 20
+                  "discountValue": 20,
+                  "eventEndAt": "%s"
                 }
-                """;
+                """.formatted(java.time.LocalDateTime.now().plusDays(1));
     }
 
     private String token(Long userId, String role, String type, long validityMillis) {

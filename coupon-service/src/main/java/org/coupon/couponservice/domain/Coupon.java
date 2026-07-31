@@ -11,11 +11,15 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.coupon.couponservice.exception.CouponSoldOutException;
+
+import java.time.LocalDateTime;
 
 /**
- * 재고를 가진 쿠폰. 비관적 락(SELECT ... FOR UPDATE)의 잠금 대상 row다.
- * 발급 규칙(불변식 0 <= issuedQuantity <= totalQuantity)을 스스로 지킨다.
+ * 재고를 가진 쿠폰.
+ *
+ * <p>발급 수량 판정은 이 엔티티가 하지 않는다 — V4에서는 Redis Lua가 확정하고,
+ * {@code issuedQuantity}는 컨슈머가 뒤이어 올리는 관찰값이다.
+ * 불변식을 스스로 지키던 {@code issue()}는 V1·V2 전용이라 주석으로 보존돼 있다.
  */
 @Getter
 @Entity
@@ -48,12 +52,15 @@ public class Coupon {
     /** 최소 주문 금액(선택). null이면 조건 없음. */
     private Long minOrderAmount;
 
+    @Column(nullable = false)
+    private LocalDateTime eventEndAt;
+
     /**
      * maxDiscountAmount·minOrderAmount는 생략 가능하다(빌더 기본값 null = 조건 없음).
      */
     @Builder
     private Coupon(String title, Long totalQuantity, DiscountType discountType, Long discountValue,
-                   Long maxDiscountAmount, Long minOrderAmount) {
+                   Long maxDiscountAmount, Long minOrderAmount, LocalDateTime eventEndAt) {
         discountType.validate(discountValue);
         this.title = title;
         this.totalQuantity = totalQuantity;
@@ -62,20 +69,27 @@ public class Coupon {
         this.discountValue = discountValue;
         this.maxDiscountAmount = maxDiscountAmount;
         this.minOrderAmount = minOrderAmount;
+        this.eventEndAt = eventEndAt;
     }
 
-    /**
-     * 재고가 남아 있으면 발급 수량을 1 증가시킨다.
-     * read(issuedQuantity) -> +1 -> write 구간이 레이스 컨디션의 물리적 지점이다.
-     *
-     * @throws CouponSoldOutException 재고가 모두 소진된 경우
-     */
+    /*
+    V1·V2 전용. 재고가 남아 있으면 발급 수량을 1 증가시킨다.
+    read(issuedQuantity) -> +1 -> write 구간이 레이스 컨디션의 물리적 지점이다 — 이 프로젝트의 출발점.
+
+    V4에서는 부르지 않는다. 수량 판정은 Redis Lua가 끝내고, issuedQuantity는 컨슈머가
+    CouponRepositoryCustom.increaseIssuedQuantity(조건 없는 원자적 UPDATE)로 올린다.
+    컨슈머가 이걸 부르면 Redis와 DB 카운터가 어긋나는 순간 여기서 예외가 터지는데,
+    발급 리스너에는 DLT가 없어 그 메시지가 영원히 재시도된다.
+
+    되살리려면 org.coupon.couponservice.exception.CouponSoldOutException import도 함께 복구한다.
+
     public void issue() {
         if (issuedQuantity >= totalQuantity) {
             throw new CouponSoldOutException();
         }
         this.issuedQuantity++;
     }
+    */
 
     /**
      * 잔여 발급 가능 수량.

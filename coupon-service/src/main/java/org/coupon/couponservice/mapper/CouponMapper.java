@@ -14,12 +14,21 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CouponMapper {
 
-    /**
-     * remaining은 필드가 아니라 도메인 계산값이라 getter 규약에 잡히지 않아 직접 호출한다.
-     */
+
+    @Mapping(target = "couponId", source = "coupon.id")
+    @Mapping(target = "issuedQuantity", source = "issued")
+    @Mapping(target = "remaining", expression = "java(coupon.getTotalQuantity() - issued)")
+    CouponIssueResponse toIssueResponse(Coupon coupon, long issued);
+
+
+    /*
+    V1·V2 전용. issuedQuantity가 발급의 권위였던 시절, 발급 직후의 엔티티를 그대로 변환했다.
+    V4에서는 발급 수가 Redis에 있고 엔티티는 컨슈머 랙만큼 뒤처지므로 위의 2인자 버전을 쓴다.
+
     @Mapping(target = "couponId", source = "id")
     @Mapping(target = "remaining", expression = "java(coupon.remaining())")
     CouponIssueResponse toIssueResponse(Coupon coupon);
+    */
 
     @Mapping(target = "couponId", source = "id")
     CouponResponse toResponse(Coupon coupon);

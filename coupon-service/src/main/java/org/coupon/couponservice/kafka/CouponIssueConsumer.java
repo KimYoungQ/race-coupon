@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.coupon.couponservice.domain.IssuedCoupon;
-import org.coupon.couponservice.repository.IssuedCouponRepository;
+import org.coupon.couponservice.service.KafkaCouponIssueService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -16,13 +16,17 @@ import org.springframework.stereotype.Component;
  * <p>이 리스너는 <b>단건 + 수동 ack</b>다. Saga 리스너들이 batch + 컨테이너 커밋을 쓰는 것과 다른데,
  * 성격이 다르기 때문이다 — 여기서 저장에 실패하면 "발급 자체가 없었던 일"이 되므로 재시도로 살려야 하고,
  * Saga 리스너의 중복 응답은 "이미 처리됨"이라 재시도할 이유가 없다.
+ *
+ * <p>저장은 {@code KafkaCouponIssueService#persist}에 맡기고 예외는 여기서 잡는다.
+ * 저장과 수량 증가가 한 트랜잭션이어야 하는데, 트랜잭션 안에서 제약 위반을 잡으면
+ * 이미 롤백 표시된 트랜잭션을 이어 갈 수 없기 때문이다. 경계 밖에서 잡아야 한다.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CouponIssueConsumer {
 
-    private final IssuedCouponRepository issuedCouponRepository;
+    private final KafkaCouponIssueService kafkaCouponIssueService;
 
     @KafkaListener(topics = CouponIssueMessage.TOPIC, groupId = "coupon-issue")
     public void consume(ConsumerRecord<String, CouponIssueMessage> record, Acknowledgment ack) {
@@ -30,10 +34,7 @@ public class CouponIssueConsumer {
         log.info("발급 메시지 소비: key={}, partition={}, offset={}, couponId={}, userId={}",
                 record.key(), record.partition(), record.offset(), message.couponId(), message.userId());
         try {
-            issuedCouponRepository.save(IssuedCoupon.builder()
-                    .userId(message.userId())
-                    .couponId(message.couponId())
-                    .build());
+            kafkaCouponIssueService.persist(message.couponId(), message.userId());
             ack.acknowledge();
         } catch (DataIntegrityViolationException e) {
             // UNIQUE(user_id, coupon_id) 위반 = 이 메시지를 이미 처리했다는 뜻이다.

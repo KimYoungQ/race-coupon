@@ -80,6 +80,7 @@ class CouponSagaServiceTest {
                 .discountType(DiscountType.PERCENT)
                 .discountValue(10L)
                 .minOrderAmount(minOrderAmount)
+                .eventEndAt(java.time.LocalDateTime.now().plusDays(1))
                 .build()).getId();
     }
 

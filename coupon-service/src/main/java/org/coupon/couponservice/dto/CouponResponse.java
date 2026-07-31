@@ -2,6 +2,8 @@ package org.coupon.couponservice.dto;
 
 import org.coupon.couponservice.domain.DiscountType;
 
+import java.time.LocalDateTime;
+
 /**
  * 쿠폰 상세. 발급 결과만 담는 {@link CouponIssueResponse}와 달리 등록된 쿠폰의 전체 모습을 보여준다.
  */
@@ -13,6 +15,7 @@ public record CouponResponse(
         DiscountType discountType,
         Long discountValue,
         Long maxDiscountAmount,
-        Long minOrderAmount
+        Long minOrderAmount,
+        LocalDateTime eventEndAt
 ) {
 }

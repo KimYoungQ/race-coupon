@@ -1,9 +1,12 @@
 package org.coupon.couponservice.dto;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.coupon.couponservice.domain.DiscountType;
+
+import java.time.LocalDateTime;
 
 /**
  * 관리자 쿠폰 등록 요청.
@@ -31,6 +34,10 @@ public record CouponCreateRequest(
         Long maxDiscountAmount,
 
         /** 최소 주문 금액(선택). null이면 조건 없음. */
-        Long minOrderAmount
+        Long minOrderAmount,
+
+        @NotNull(message = "이벤트 종료 시각은 필수입니다")
+        @Future(message = "이벤트 종료 시각은 미래여야 합니다")
+        LocalDateTime eventEndAt
 ) {
 }

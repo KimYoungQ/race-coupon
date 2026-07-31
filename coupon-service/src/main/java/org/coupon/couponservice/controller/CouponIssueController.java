@@ -3,6 +3,7 @@ package org.coupon.couponservice.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.response.ApiResponse;
+import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
 import org.coupon.couponservice.dto.CouponIssueResponse;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.coupon.couponservice.service.KafkaCouponIssueService;
@@ -29,14 +30,14 @@ public class CouponIssueController implements CouponIssueControllerApi {
      * 게이트웨이가 앞에서 한 번 걸러주지만, 우회 호출에 대비해 JwtAuthenticationFilter가 여기서도 재검증한다.
      */
     @PostMapping("/{couponId}/issue")
-    public ResponseEntity<ApiResponse<CouponIssueResponse>> issue(
+    public ResponseEntity<ApiResponse<CouponIssueAcceptedResponse>> issue(
             @PathVariable Long couponId,
             @AuthenticationPrincipal AuthenticatedUser user) {
         Long userId = user.getUserId();
         log.info("쿠폰 발급 요청: couponId={}, userId={}", couponId, userId);
-        CouponIssueResponse response = kafkaCouponIssueService.issue(couponId, userId);
+        CouponIssueAcceptedResponse response = kafkaCouponIssueService.issue(couponId, userId);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));
     }
 
     @GetMapping("/{couponId}")

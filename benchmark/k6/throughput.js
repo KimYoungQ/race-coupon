@@ -6,7 +6,7 @@ import { authHeaders } from './jwt.js';
 const BASE = __ENV.BASE_URL || 'http://localhost:8081';
 const COUPON_ID = __ENV.COUPON_ID || '1';
 
-// 201/409/5xx를 분리 집계 — 409(품절)는 정상 비즈니스 응답이므로 실패로 보지 않는다.
+// 202/409/5xx를 분리 집계 — 409(품절·중복·종료)는 정상 비즈니스 응답이므로 실패로 보지 않는다.
 const created = new Counter('coupon_created');
 const soldOut = new Counter('coupon_sold_out');
 const serverError = new Counter('coupon_server_error');
@@ -43,7 +43,7 @@ export default function () {
   });
 
   issueDuration.add(res.timings.duration);
-  if (res.status === 201) created.add(1);
+  if (res.status === 202) created.add(1);
   else if (res.status === 409) soldOut.add(1);
   else serverError.add(1);
 }
