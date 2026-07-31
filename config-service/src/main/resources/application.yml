@@ -17,7 +17,3 @@ management:
     web:
       exposure:
         include: health, info
-
-logging:
-  level:
-    root: INFO

@@ -1,8 +1,7 @@
 # 나머지 설정은 config-service가 config/product-service.yml + config/application.yml로 내려준다.
 #
-# import 순서대로 읽는다. .env가 먼저 있어야 config-service가 리터럴로 내려보낸
-# ${JWT_SECRET}을 이 서비스가 해석할 수 있다. .env의 키는 그것 하나뿐이다.
 # configserver에 optional:을 붙이지 않는다 — config-service가 없으면 조용히 뜨는 대신 기동을 실패시킨다.
+# profiles.active는 SPRING_PROFILES_ACTIVE 환경변수나 --spring.profiles.active로 덮인다.
 server:
   port: 8083
   servlet:
@@ -11,7 +10,7 @@ server:
 spring:
   application:
     name: product-service
+  profiles:
+    active: local
   config:
-    import:
-      - "optional:file:.env[.properties]"
-      - "configserver:http://localhost:8888"
+    import: "configserver:http://localhost:8888"

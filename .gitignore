@@ -37,6 +37,7 @@ out/
 .vscode/
 
 .env
+config/*-prod.yml
 logs/
 .omc/
 benchmark/*

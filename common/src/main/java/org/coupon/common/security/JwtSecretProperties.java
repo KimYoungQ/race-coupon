@@ -22,15 +22,15 @@ public record JwtSecretProperties(String secret) {
 
     public JwtSecretProperties {
         // @ConfigurationProperties 바인딩은 @Value와 달리 해결하지 못한 플레이스홀더를
-        // 예외 없이 "${JWT_SECRET}" 리터럴로 남긴다. 그대로 두면 환경변수를 빼먹어도
+        // 예외 없이 "${...}" 리터럴로 남긴다. 그대로 두면 값을 빼먹어도
         // 조용히 기동해서 예측 가능한 키로 서명을 검증하게 되므로 여기서 직접 막는다.
         if (secret == null || secret.isBlank() || secret.startsWith("${")) {
             throw new IllegalStateException(
-                    "JWT_SECRET이 설정되지 않았습니다. 저장소 루트의 .env에 JWT_SECRET을 지정하세요.");
+                    "jwt.secret이 설정되지 않았습니다. config/application-{profile}.yml에 지정하세요.");
         }
         if (secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
             throw new IllegalStateException(
-                    "JWT_SECRET이 너무 짧습니다. HS256은 최소 " + MIN_SECRET_BYTES + "바이트를 요구합니다.");
+                    "jwt.secret이 너무 짧습니다. HS256은 최소 " + MIN_SECRET_BYTES + "바이트를 요구합니다.");
         }
     }
 

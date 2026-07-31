@@ -49,7 +49,7 @@ public class JwtTokenProvider {
         // 환경변수를 빼먹은 채 조용히 기동해 예측 가능한 키로 토큰을 발급하는 사고를 막는다.
         if (secret == null || secret.isBlank() || secret.startsWith("${")) {
             throw new IllegalStateException(
-                    "JWT_SECRET이 설정되지 않았습니다. 저장소 루트의 .env에 JWT_SECRET을 지정하세요.");
+                    "jwt.secret이 설정되지 않았습니다. config/application-{profile}.yml에 지정하세요.");
         }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenValiditySeconds = accessTokenValidity;

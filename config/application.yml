@@ -1,10 +1,9 @@
+# 모든 서비스의 공통 base. 환경에 따라 달라지는 값은 여기 두지 않는다 —
+# 접속 주소·자격증명·스키마 정책은 application-{profile}.yml이 담당한다.
+#
+# config/*-prod.yml은 .gitignore 대상이라 새로 클론한 환경에는 없다. base에 접속 정보가
+# 남아 있으면 prod로 띄웠을 때 그 값이 그대로 적용되므로, 여기에는 절대 두지 않는다.
 spring:
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-
   # 프리픽스가 spring.jackson 이 아니라 spring.jackson2 다.
   # Boot 4.1은 Jackson이 두 벌이다 — starter-webmvc가 Jackson 3(tools.jackson.*, spring.jackson.*),
   # eureka-client가 끌고 오는 spring-boot-jackson2가 Jackson 2(com.fasterxml.*, spring.jackson2.*)다.
@@ -22,17 +21,10 @@ spring:
 
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
     refresh:
       enable: false
   instance:
     prefer-ip-address: true
-
-jwt:
-  # 유일한 플레이스홀더. 각 서비스가 저장소 루트의 .env에서 해석한다.
-  # .env가 없으면 이 설정을 받는 5개 모듈이 전부 기동 실패한다.
-  secret: ${JWT_SECRET}
 
 management:
   info:
@@ -43,28 +35,12 @@ management:
       exposure:
         include: health, info, env, refresh, busrefresh
 
-  # 이 블록은 configserver를 import하는 5개 모듈에만 닿는다 —
-  # discovery·config-service는 config 클라이언트가 아니고 starter-opentelemetry도 없다.
-  # 그 둘을 빼는 이유는 유레카 하트비트·Config 폴링 스팬이 계속 쌓여 Jaeger UI를 덮기 때문이다.
-  tracing:
-    sampling:
-      # Boot 기본값은 0.10이다. 개발 중에는 전부 봐야 하므로 올린다.
-      # 벤치마크(선착순 발급) 측정 시에는 -Dmanagement.tracing.enabled=false 로 끈다 —
-      # 핫패스에 계측이 붙은 채로 재면 이전 측정치와 비교가 되지 않는다.
-      probability: 1.0
-
   # 프리픽스가 management.otlp.tracing 이 아니라 management.opentelemetry.tracing.export.otlp 다.
   # Boot 3.x는 management.otlp.tracing.endpoint 였고 4.x에서 이 경로로 옮겨졌다.
   # 검색으로 나오는 자료는 대부분 3.x 기준이고, 바로 아래 management.otlp.metrics 와 짝이
   # 안 맞아 보여서 "일관성 있게" 되돌리기 쉽다. 되돌리면 exporter가 조용히 기본 엔드포인트로
   # 붙어 Jaeger에 아무것도 안 들어온다. 이 주석을 지우지 말 것.
-  opentelemetry:
-    tracing:
-      export:
-        otlp:
-          # Spring 서비스는 컨테이너가 아니라 호스트에서 뜨므로 localhost다(MySQL·Kafka와 같은 규칙).
-          # transport 기본값이 HTTP라 gRPC(4317)가 아니라 4318이다.
-          endpoint: http://localhost:4318/v1/traces
+  # (endpoint 값 자체는 환경마다 다르므로 application-{profile}.yml에 있다)
 
   # 메트릭 쪽은 tracing과 달리 프리픽스가 그대로다(management.otlp.metrics). 위 주석 참조.
   # starter-opentelemetry가 micrometer-registry-otlp까지 끌고 오는데 Jaeger는 트레이스만 받는다.

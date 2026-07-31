@@ -1,0 +1,32 @@
+# 로컬 개발 공통값. 인프라는 docker-compose로 뜨고 Spring 서비스는 호스트에서 뜨므로 전부 localhost다.
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+# 로컬 전용 서명 키. 운영 키는 config/application-prod.yml(git 미추적)에 둔다.
+# JwtSecretProperties가 32바이트 미만을 거부한다.
+jwt:
+  secret: local-dev-only-jwt-secret-change-this-in-production-0123456789
+
+management:
+  tracing:
+    sampling:
+      # Boot 기본값은 0.10이다. 개발 중에는 전부 봐야 하므로 올린다.
+      # 벤치마크(선착순 발급) 측정 시에는 -Dmanagement.tracing.enabled=false 로 끈다 —
+      # 핫패스에 계측이 붙은 채로 재면 이전 측정치와 비교가 되지 않는다.
+      probability: 1.0
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # transport 기본값이 HTTP라 gRPC(4317)가 아니라 4318이다.
+          endpoint: http://localhost:4318/v1/traces

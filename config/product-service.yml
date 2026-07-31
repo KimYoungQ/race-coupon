@@ -1,9 +1,6 @@
+# 환경 무관 base. 접속 주소·자격증명·스키마 정책은 product-service-{profile}.yml에 있다.
 spring:
-  # Datasource (MySQL) — Database per Service: product_service 스키마
   datasource:
-    url: "jdbc:mysql://localhost:3306/product_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
-    username: cpuser
-    password: cppass
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: ProductHikariCP
@@ -15,7 +12,6 @@ spring:
 
   # Kafka — 재고 예약/복구 커맨드 소비, 리플라이 발행
   kafka:
-    bootstrap-servers: localhost:9092,localhost:9192,localhost:9292
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -51,31 +47,15 @@ spring:
       pool:
         size: 2
 
-  # JPA / Hibernate
   jpa:
-    hibernate:
-      ddl-auto: create
-    show-sql: true
     open-in-view: false
     defer-datasource-initialization: true
     properties:
       hibernate:
-        format_sql: true
         default_batch_fetch_size: 100
-
-  # SQL Initialization
-  sql:
-    init:
-      mode: always
-      encoding: UTF-8
 
 # 응답 Outbox 발행 재시도 주기. 정상 경로는 커밋 직후 즉시 발행된다.
 product-service:
   outbox:
     fixed-delay: 5000
     initial-delay: 10000
-
-logging:
-  level:
-    root: INFO
-    org.coupon.productservice: DEBUG

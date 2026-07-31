@@ -2,6 +2,7 @@ import crypto from 'k6/crypto';
 import encoding from 'k6/encoding';
 
 // user-service와 같은 서명 키. coupon-api가 이 키로 토큰을 재검증한다.
+// 값은 config/application-{profile}.yml의 jwt.secret과 같아야 한다.
 const SECRET = __ENV.JWT_SECRET;
 
 // 클레임 이름은 user-service JwtTokenProvider가 발급하는 것과 정확히 같아야 한다.
