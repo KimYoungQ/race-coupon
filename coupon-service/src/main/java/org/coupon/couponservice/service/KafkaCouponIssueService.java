@@ -13,6 +13,7 @@ import org.coupon.couponservice.exception.CouponSoldOutException;
 import org.coupon.couponservice.kafka.CouponIssueMessage;
 import org.coupon.couponservice.kafka.CouponIssueProducer;
 import org.coupon.couponservice.mapper.CouponMapper;
+import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.repository.CouponIssueRedisRepository;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
@@ -42,12 +43,18 @@ public class KafkaCouponIssueService {
     private final CouponIssueRedisRepository couponIssueRedisRepository;
     private final CouponIssueProducer couponIssueProducer;
     private final CouponMapper couponMapper;
+    private final CouponIssueMetrics metrics;
 
     public CouponIssueAcceptedResponse issue(Long couponId, Long userId) {
+        return metrics.recordDecision(() -> doIssue(couponId, userId));
+    }
+
+    private CouponIssueAcceptedResponse doIssue(Long couponId, Long userId) {
         Coupon coupon = getCoupon(couponId);
 
         long ttlSeconds = issueTtlSeconds(coupon);
         if (ttlSeconds <= 0) {
+            metrics.rejectedEventEnded();
             throw new CouponEventEndedException(couponId);
         }
 
@@ -55,6 +62,7 @@ public class KafkaCouponIssueService {
                 couponId, userId, coupon.getTotalQuantity(), ttlSeconds);
 
         if (result > 0) {
+            metrics.accepted();
             couponIssueProducer.issue(new CouponIssueMessage(couponId, userId));
             return new CouponIssueAcceptedResponse(couponId, userId);
         }
@@ -62,12 +70,14 @@ public class KafkaCouponIssueService {
             return reissueOrReject(couponId, userId);
         }
         if (result == SOLD_OUT) {
+            metrics.rejectedSoldOut();
             throw new CouponSoldOutException();
         }
 
         // 이벤트 종료는 위에서 이미 걸러냈다. 여기까지 왔다면 이 인스턴스의 시계가 어긋난 것이다.
         log.warn("발급 스크립트가 TTL 무효를 반환했다. 인스턴스 시계 확인 필요: couponId={}, ttlSeconds={}",
                 couponId, ttlSeconds);
+        metrics.rejectedEventEnded();
         throw new CouponEventEndedException(couponId);
     }
 
@@ -103,9 +113,11 @@ public class KafkaCouponIssueService {
      */
     private CouponIssueAcceptedResponse reissueOrReject(Long couponId, Long userId) {
         if (issuedCouponRepository.findByUserIdAndCouponId(userId, couponId).isPresent()) {
+            metrics.rejectedAlreadyIssued();
             throw new CouponAlreadyIssuedException(userId, couponId);
         }
 
+        // 202를 주지만 신규 발급 허용이 아니라 복구다. accepted를 올리면 발급 수가 부풀려진다.
         log.warn("발급 이력은 있으나 발급 건이 없어 재발행한다: couponId={}, userId={}", couponId, userId);
         couponIssueProducer.issue(new CouponIssueMessage(couponId, userId));
 

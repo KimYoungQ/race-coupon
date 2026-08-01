@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.coupon.couponservice.domain.IssuedCoupon;
+import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.service.KafkaCouponIssueService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
 public class CouponIssueConsumer {
 
     private final KafkaCouponIssueService kafkaCouponIssueService;
+    private final CouponIssueMetrics metrics;
 
     @KafkaListener(topics = CouponIssueMessage.TOPIC, groupId = "coupon-issue")
     public void consume(ConsumerRecord<String, CouponIssueMessage> record, Acknowledgment ack) {
@@ -34,17 +36,21 @@ public class CouponIssueConsumer {
         log.info("발급 메시지 소비: key={}, partition={}, offset={}, couponId={}, userId={}",
                 record.key(), record.partition(), record.offset(), message.couponId(), message.userId());
         try {
-            kafkaCouponIssueService.persist(message.couponId(), message.userId());
+            metrics.recordPersistence(() ->
+                    kafkaCouponIssueService.persist(message.couponId(), message.userId()));
+            metrics.persisted();
             ack.acknowledge();
         } catch (DataIntegrityViolationException e) {
             // UNIQUE(user_id, coupon_id) 위반 = 이 메시지를 이미 처리했다는 뜻이다.
             // Kafka는 at-least-once라 저장 성공 후 ack 전에 중단되면 같은 메시지를 다시 받는다.
             // 재시도해도 결과가 같으므로 오프셋을 진행시킨다. 삼키지 않으면 무한 재시도 루프가 된다.
+            metrics.duplicateMessage();
             log.info("이미 발급된 쿠폰, 중복 메시지로 판단하고 넘어간다: couponId={}, userId={}",
                     message.couponId(), message.userId());
             ack.acknowledge();
         } catch (Exception e) {
             // 예상하지 못한 DB 장애는 "아직 처리 못 함"이다. 삼키면 발급이 영구 유실된다.
+            metrics.consumeFailed();
             log.error("발급 메시지 처리 실패: userId={}", message.userId(), e);
             throw e;
         }

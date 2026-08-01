@@ -6,6 +6,7 @@ import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
 import org.coupon.couponservice.dto.CouponIssueResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
+import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.coupon.couponservice.service.CouponService;
 import org.coupon.couponservice.service.KafkaCouponIssueService;
@@ -28,6 +29,7 @@ public class CouponIssueController implements CouponIssueControllerApi {
 
     private final KafkaCouponIssueService kafkaCouponIssueService;
     private final CouponService couponService;
+    private final CouponIssueMetrics metrics;
 
     @GetMapping("/issuable")
     public ResponseEntity<ApiResponse<List<IssuableCouponResponse>>> getIssuableCoupons(
@@ -45,6 +47,7 @@ public class CouponIssueController implements CouponIssueControllerApi {
             @PathVariable Long couponId,
             @AuthenticationPrincipal AuthenticatedUser user) {
         Long userId = user.getUserId();
+        metrics.requested();
         log.info("쿠폰 발급 요청: couponId={}, userId={}", couponId, userId);
         CouponIssueAcceptedResponse response = kafkaCouponIssueService.issue(couponId, userId);
 
