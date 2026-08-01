@@ -1,0 +1,48 @@
+groups:
+  - name: spring-boot-alerts
+    rules:
+      # 에러율 5% 초과 시 (5분 지속)
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "높은 에러율 감지"
+          description: "현재 에러율: {{ $value | humanizePercentage }}"
+
+      # P95 응답 시간 2초 초과 (5분 지속)
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by(le) (rate(http_server_requests_seconds_bucket[5m]))) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 응답 지연 감지"
+          description: "P95 응답 시간: {{ $value | humanize }}s"
+
+      # 힙 메모리 90% 초과 (5분 지속)
+      - alert: HighHeapMemoryUsage
+        expr: |
+          jvm_memory_used_bytes{area="heap"}
+          / jvm_memory_max_bytes{area="heap"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 힙 메모리 사용률"
+          description: "힙 사용률: {{ $value | humanizePercentage }}"
+
+      # DB 커넥션 풀 대기 발생 (즉시)
+      - alert: ConnectionPoolExhaustion
+        expr: hikaricp_connections_pending > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DB 커넥션 풀 대기 발생"
+          description: "대기 중인 커넥션 요청: {{ $value }}건"

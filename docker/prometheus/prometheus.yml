@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
+# Spring 서비스는 컨테이너가 아니라 호스트에서 bootRun으로 뜬다.
+# 그래서 대상 주소가 localhost가 아니라 host.docker.internal이다 —
+# 컨테이너 안의 localhost는 Prometheus 자기 자신이라 전부 connection refused가 된다.
+#
+# application 라벨을 여기서 붙인다. Grafana 공개 대시보드(4701, 12900)가 이 라벨로
+# 서비스를 구분하므로, 없으면 임포트해도 드롭다운이 비어 있다.
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+
+  - job_name: 'spring-boot-app'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s          # 애플리케이션은 더 자주 수집
+    scrape_timeout: 3s           # 3초 내 응답 없으면 실패 처리
+    static_configs:
+      - targets: [ 'host.docker.internal:8080' ]
+        labels: { application: apigateway }
+      - targets: [ 'host.docker.internal:8081' ]
+        labels: { application: coupon-service }
+      - targets: [ 'host.docker.internal:8082' ]
+        labels: { application: user-service }
+      - targets: [ 'host.docker.internal:8083' ]
+        labels: { application: product-service }
+      - targets: [ 'host.docker.internal:8084' ]
+        labels: { application: order-service }

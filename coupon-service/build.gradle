@@ -8,6 +8,10 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // 메트릭을 /actuator/prometheus 노출 포맷으로 바꾸는 역할만 한다. 컴파일 타임에 참조할 타입이
+    // 없어 runtimeOnly다 — 커스텀 메트릭이 쓰는 micrometer-core는 actuator가 이미 끌고 온다
+    // (starter-actuator → starter-micrometer-metrics → micrometer-core, Boot 4.1 기준).
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     // 분산 추적 — Micrometer Observation → micrometer-tracing-bridge-otel → OTLP → Jaeger.
     // 이 스타터 하나가 브리지와 OTLP exporter를 모두 끌고 온다(개별 선언 불필요).
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'

@@ -74,9 +74,3 @@ springdoc:
         url: /v3/api-docs/product-service
       - name: order-service
         url: /v3/api-docs/order-service
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: gateway, health, info, env, refresh, busrefresh

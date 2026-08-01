@@ -33,7 +33,18 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, env, refresh, busrefresh
+        # 노출 목록의 권한은 여기 한 곳이다. 개별 config/{service}.yml에 include를 다시 쓰면
+        # 병합이 아니라 '치환'이라 base 목록이 통째로 날아간다. gateway를 여기 적어 둔 이유다 —
+        # 등록되지 않은 엔드포인트 ID는 Boot가 조용히 무시하므로 게이트웨이 아닌 서비스에서도 무해하다.
+        #
+        # busrefresh를 빼지 말 것. 5개 서비스의 spring-cloud-starter-bus-amqp가 이것 하나로 쓰인다.
+        include: health, info, loggers, metrics, prometheus, env, refresh, busrefresh, gateway
+        exclude: shutdown
+
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
   # 프리픽스가 management.otlp.tracing 이 아니라 management.opentelemetry.tracing.export.otlp 다.
   # Boot 3.x는 management.otlp.tracing.endpoint 였고 4.x에서 이 경로로 옮겨졌다.

@@ -1,0 +1,12 @@
+apiVersion: 1
+
+# 호스트 이름이 localhost가 아니라 prometheus다 — Grafana도 컨테이너라
+# coupon-net 안에서 compose 서비스명으로 서로를 찾는다.
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    # 이 파일이 정본이다. UI에서 고쳐도 컨테이너를 recreate하면 되돌아간다.
+    editable: false

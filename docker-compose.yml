@@ -212,6 +212,53 @@ services:
       # 8080~8084는 앱, 8090은 kafka-ui가 쓴다.
       - "16686:16686"  # UI
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: coupon-prometheus
+    restart: unless-stopped
+    networks: [ coupon-net ]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml
+      - prometheus-data:/prometheus
+    # Spring 서비스가 컨테이너 밖(호스트)에서 뜨므로 host.docker.internal로 되짚어야 한다.
+    # Docker Desktop은 이 이름을 기본 제공하지만 Linux 데몬은 아니다. 명시해 두면 양쪽에서 동작한다.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      # 이게 있어야 알림 규칙을 추가할 때 컨테이너 재생성 없이
+      # curl -X POST http://localhost:9090/-/reload 로 반영된다.
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: coupon-grafana
+    restart: unless-stopped
+    networks: [ coupon-net ]
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      # 데이터소스를 파일로 고정한다. UI에서 등록하면 컨테이너를 recreate할 때마다 사라진다.
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      # 로컬 전용 자격증명. 운영에 그대로 쓰지 말 것 — jwt.secret과 같은 취급이다.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    depends_on:
+      - prometheus
+
+# MySQL·Redis에는 볼륨을 두지 않는다(recreate = 테스트 초기화라 그게 이득이다).
+# 관측 데이터는 성격이 반대다 — 날아가면 벤치마크 전후 비교라는 목적 자체가 사라진다.
+volumes:
+  prometheus-data:
+  grafana-data:
+
 networks:
   coupon-net:
     name: coupon-net

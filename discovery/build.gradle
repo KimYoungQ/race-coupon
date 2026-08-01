@@ -2,4 +2,8 @@ apply plugin: 'org.springframework.boot'
 
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+
+    // 이 서버가 죽으면 서비스 디스커버리가 통째로 마비되는데 그때까지 헬스체크 수단이 없었다.
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 }

@@ -3,5 +3,7 @@ apply plugin: 'org.springframework.boot'
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-config-server'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // 앱 트래픽은 없지만 나머지 6개가 기동 실패하는 단일 장애점이라 JVM·힙만으로도 값어치가 있다.
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
 }
