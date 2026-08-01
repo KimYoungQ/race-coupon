@@ -1,29 +1,14 @@
 # raceCoupon — 선착순 쿠폰 발급 시스템
 
- 대규모 트래픽 환경에서 선착순 쿠폰을 정확하게 발급하기 위한 시스템입니다.
-레이스 컨디션을 의도적으로 재현하고, 이를 해결하는 과정을 단계별로 구현했습니다.
-먼저 비관적 락으로 발급 정확성을 보장한 뒤, DB 락 병목을 줄이기 위해 Redis 원자 연산과 Kafka 비동기 처리를 적용해 성능과 확장성을 개선했습니다. 현재는 MSA 아키텍처 전환하여 서비스의 확장성과 운영성을 높이는 방향으로 고도화하고 있습니다. 
+대규모 동시 요청 환경에서 선착순 쿠폰을 안정적으로 발급하기 위한 MSA 기반 프로젝트입니다.  
+동시성 문제를 해결하는 과정을 단계적으로 구현하며, 정확한 쿠폰 발급과 확장 가능한 서비스 구조를 고민했습니다.  
+서비스 분리, 비동기 처리, 운영 환경 구성을 통해 실제 서비스에 가까운 시스템 설계를 목표로 합니다.
 <br>
 <br>
  자세한 내용은 [WIKI](https://github.com/KimYoungQ/race-coupon/wiki) 통해 참고하실 수 있습니다.
 <br>
 <br>
 
-## 기술 스택
-
-| 구분 | 기술 |
-|------|------|
-| Language | Java 17 |
-| Framework | Spring Boot 4.1.0 |
-| Persistence | Spring Data JPA, QueryDSL 5.1.0 |
-| Database | MySQL 8.0 |
-| In-Memory | Redis|
-| Messaging | Kafka |
-| Build | Gradle |
-| Infra | Docker Compose |
-
-<br>
-<br>
-
 ## 프로젝트 구성도
+<img width="726" height="747" alt="msa_final_final" src="https://github.com/user-attachments/assets/a68f3d30-0321-4280-8c46-c9029c1767f3" />
 
