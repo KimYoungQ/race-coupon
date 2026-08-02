@@ -10,5 +10,5 @@
 <br>
 
 ## 프로젝트 구성도
-<img width="726" height="747" alt="msa_final_final" src="https://github.com/user-attachments/assets/a68f3d30-0321-4280-8c46-c9029c1767f3" />
+<img width="696" height="719" alt="msa_final_final" src="https://github.com/user-attachments/assets/cc6d3dcb-f318-40fa-9827-3cf8da31f760" />
 
