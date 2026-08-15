@@ -9,6 +9,4 @@
 <br>
 <br>
 
-## 프로젝트 구성도
-<img width="696" height="719" alt="msa_final_final" src="https://github.com/user-attachments/assets/cc6d3dcb-f318-40fa-9827-3cf8da31f760" />
 
