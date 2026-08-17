@@ -8,5 +8,8 @@
  자세한 내용은 [WIKI](https://github.com/KimYoungQ/race-coupon/wiki) 통해 참고하실 수 있습니다.
 <br>
 <br>
+<br>
+<img width="590" height="717" alt="image" src="https://github.com/user-attachments/assets/3ebe46e2-bb4c-4e4b-8fac-5b1812011826" />
+
 
 
