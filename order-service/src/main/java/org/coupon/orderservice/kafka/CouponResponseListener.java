@@ -14,10 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * {@code coupon-response}를 소비한다. 분기 방식과 예외 판정 기준은
- * {@link ProductResponseListener}와 같다 — 근거는 그쪽 javadoc을 따른다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -35,7 +31,6 @@ public class CouponResponseListener {
         for (int index = 0; index < responses.size(); index++) {
             CouponResponse response = responses.get(index);
 
-            // 시그니처를 그대로 두는 근거는 ProductResponseListener 참조.
             try (var ignored = sagaTraceTag.open(SagaTraceTag.SAGA_CONSUME, response.sagaId())) {
                 dispatch(response);
             } catch (OptimisticLockingFailureException e) {

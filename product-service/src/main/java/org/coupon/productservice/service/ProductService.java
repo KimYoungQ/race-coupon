@@ -13,12 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * 상품 등록·조회. 재고 차감은 여기 없다 —
- * {@code PRODUCT.stock}을 바꾸는 경로는 주문 Saga의 Kafka 컨슈머 하나뿐이다.
- *
- * <p>접근 제어는 이 클래스가 아니라 컨트롤러의 {@code @PreAuthorize}가 선언한다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,10 +35,6 @@ public class ProductService {
         return productMapper.toResponse(saved);
     }
 
-    /**
-     * open-in-view가 꺼져 있어 트랜잭션 밖에서는 LAZY 접근이 실패한다.
-     * DTO 변환을 이 경계 안에서 끝내는 이유다.
-     */
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)

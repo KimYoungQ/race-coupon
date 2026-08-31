@@ -37,13 +37,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-/**
- * 실제 Kafka를 거친 오케스트레이터 왕복. 응답 리스너가 진짜로 도는지, 그리고
- * <b>처리에 실패한 레코드가 DLT로 빠지는지</b>를 본다.
- *
- * <p>DLT는 P6에서 붙인 것이고 원본 food-ordering-system에는 없다. 없으면 재시도 소진 후
- * 기본 recoverer가 로그만 남기고 레코드를 건너뛴다 — 조용한 유실이다.
- */
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 3,
         topics = {SagaTopics.PRODUCT_REQUEST, SagaTopics.PRODUCT_RESPONSE,
@@ -105,7 +98,6 @@ class OrderResponseKafkaTest {
         return orderRepository.findById(orderId).orElseThrow();
     }
 
-    /** 응답 키는 orderId다 — 같은 주문의 결과가 순차 처리되도록. */
     private void sendResponse(UUID sagaId, Long orderId, StockStatus status) {
         StockResponse response = new StockResponse(UUID.randomUUID(), sagaId, orderId, PRODUCT_ID,
                 status,
@@ -126,35 +118,25 @@ class OrderResponseKafkaTest {
             Order after = orderRepository.findById(order.getId()).orElseThrow();
             assertThat(after.getStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
             assertThat(after.getTotalAmount()).isEqualTo(UNIT_PRICE * 2);
-            // 다음 단계가 '기록'됐다
             assertThat(couponOutboxHelper.find(order.getSagaId(), CouponOrderStatus.PENDING))
                     .isPresent();
         });
     }
 
-    /**
-     * 처리에 실패하는 레코드를 만든다 — Outbox는 응답을 기다리고 있는데 주문이 존재하지 않는 상태.
-     *
-     * <p>{@code OrderNotFoundException}은 리스너가 삼키는 두 예외(확인된 중복)에 해당하지 않으므로
-     * {@code BatchListenerFailedException}으로 올라가고, 재시도가 소진되면 DLT로 간다.
-     */
     @Test
     @DisplayName("처리에 반복 실패한 레코드는 유실되지 않고 DLT로 간다")
     void unprocessable_record_goes_to_dlt() {
         Order order = placeOrder();
         Long missingOrderId = order.getId() + 9_999L;
 
-        // sagaId는 맞아 Outbox 조회는 통과하고, orderId가 없어 findOrder에서 터진다
         sendResponse(order.getSagaId(), missingOrderId, StockStatus.RESERVED);
 
         ConsumerRecord<String, StockResponse> dlt = KafkaTestUtils.getSingleRecord(
                 dltConsumer, SagaTopics.PRODUCT_RESPONSE + ".DLT", Duration.ofSeconds(30));
 
         assertThat(dlt.value().orderId()).isEqualTo(missingOrderId);
-        // 원인이 헤더에 실려 온다 — 이게 없으면 왜 DLT에 있는지 알 수 없다
         assertThat(dlt.headers().lastHeader("kafka_dlt-exception-fqcn")).isNotNull();
 
-        // 사가는 전진하지 않았다. DLT는 회복이 아니라 격리·관측 수단이다.
         assertThat(orderRepository.findById(order.getId()).orElseThrow().getStatus())
                 .isEqualTo(OrderStatus.CREATED);
     }

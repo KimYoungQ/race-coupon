@@ -14,17 +14,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Saga 메시지 계약 테스트.
- *
- * <p>Avro Schema Registry를 쓰지 않으므로 <b>DTO의 필드 이름·enum 값·JSON 형식이 곧 계약</b>이다.
- * producer와 consumer가 서로 다른 배포 시점에 있을 수 있고, Outbox payload는 배포 간격을 넘어
- * 살아남는다. 필드명이 바뀌면 예외 없이 조용히 null로 역직렬화되므로, 그 변경이 리뷰 없이
- * 통과하지 못하도록 여기서 고정한다.
- *
- * <p>역직렬화 테스트는 {@code -parameters} 컴파일 옵션의 회귀 테스트를 겸한다.
- * 옵션이 빠지면 record 컴포넌트가 {@code arg0, arg1}로 바인딩돼 이 테스트가 깨진다.
- */
 class SagaMessageContractTest {
 
     private static final UUID ID = UUID.fromString("11111111-1111-1111-1111-111111111111");

@@ -13,12 +13,6 @@ import org.coupon.couponservice.dto.CouponCreateRequest;
 import org.coupon.couponservice.dto.CouponResponse;
 import org.springframework.http.ResponseEntity;
 
-/**
- * 관리자 쿠폰 등록 API 문서화 인터페이스.
- *
- * <p>{@code ADMIN} 역할이 필요하다. 권한이 없으면 403이며, 인가는 컨트롤러의
- * {@code @PreAuthorize("hasRole('ADMIN')")}가 단독으로 판정한다.
- */
 @Tag(name = "쿠폰 관리(관리자)", description = "쿠폰 등록 API — ROLE_ADMIN 필요")
 public interface CouponAdminControllerApi {
 

@@ -12,16 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
-/**
- * 전 서비스 공통 예외 처리. coupon-api·user-service 등 이 모듈을 쓰는 모든 서비스가 공유한다.
- * 새 예외가 생겨도 이 핸들러는 수정하지 않는다 — ErrorCode 상수 추가 + BusinessException 상속이면 끝이다.
- *
- * <p>패키지가 다른 서비스(예: org.coupon.userservice)는 컴포넌트 스캔에 잡히지 않으므로
- * 애플리케이션 클래스에 {@code @Import(GlobalExceptionHandler.class)}를 붙여야 한다.
- *
- * <p>서블릿 웹 앱에서만 등록한다. coupon-consumer처럼 같은 베이스 패키지를 쓰는 비웹 모듈이
- * 이 클래스를 스캔하면 servlet 타입을 못 찾아 기동이 실패한다(HTTP 응답을 만들 일도 없다).
- */
 @Slf4j
 @RestControllerAdvice
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -36,9 +26,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(errorCode.getCode(), e.getMessage()));
     }
 
-    /**
-     * {@code @Valid @RequestBody} 검증 실패. 필드별 한글 message를 모아 한 번에 내려준다.
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -48,9 +35,6 @@ public class GlobalExceptionHandler {
         return badRequest(message);
     }
 
-    /**
-     * {@code @PathVariable}/{@code @RequestParam} 검증 실패(컨트롤러의 {@code @Validated}와 짝).
-     */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException e) {
         String message = e.getConstraintViolations().stream()
@@ -60,10 +44,6 @@ public class GlobalExceptionHandler {
         return badRequest(message);
     }
 
-    /**
-     * 필수 요청 값 누락(헤더·파라미터·쿠키·경로변수).
-     * 이 핸들러가 없으면 아래 handleGeneral로 떨어져 클라이언트 잘못인데도 500이 나간다.
-     */
     @ExceptionHandler(MissingRequestValueException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingRequestValue(MissingRequestValueException e) {
         log.warn("필수 요청 값 누락: {}", e.getMessage());

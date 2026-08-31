@@ -28,7 +28,7 @@ class CouponServiceTest {
     private CouponService couponService;
 
     @Autowired
-    private KafkaCouponIssueService kafkaCouponIssueService;
+    private CouponIssueService couponIssueService;
 
     @Autowired
     private CouponRepository couponRepository;
@@ -42,10 +42,6 @@ class CouponServiceTest {
         couponRepository.deleteAllInBatch();
     }
 
-    /**
-     * 안티 조인이 무너졌는지 잡는 테스트다. {@code userId} 조건이 {@code on}이 아니라
-     * {@code where}로 내려가면 LEFT JOIN이 INNER JOIN이 되어 발급 이력이 0건인 쿠폰이 통째로 사라진다.
-     */
     @Test
     @DisplayName("발급 이력이 하나도 없는 쿠폰도 목록에 나온다")
     void includes_coupon_with_no_issue_history() {
@@ -123,9 +119,8 @@ class CouponServiceTest {
         assertThat(result.get(0).remaining()).isEqualTo(98L);
     }
 
-    /** 발급 컨슈머와 같은 경로다 — IssuedCoupon 저장과 issuedQuantity 증가가 한 트랜잭션이다. */
     private void persistIssue(Long couponId, Long userId) {
-        kafkaCouponIssueService.persist(couponId, userId);
+        couponIssueService.persist(couponId, userId);
     }
 
     private Long saveCoupon(Long totalQuantity, LocalDateTime eventEndAt) {

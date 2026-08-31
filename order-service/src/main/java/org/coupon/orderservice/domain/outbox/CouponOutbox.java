@@ -17,15 +17,6 @@ import org.coupon.orderservice.domain.OrderStatus;
 
 import java.util.UUID;
 
-/**
- * coupon-service로 나갈 쿠폰 요청의 Outbox. 구조는 {@link ProductOutbox}와 같고
- * {@code requestStatus}의 타입만 다르다.
- *
- * <p>현재 사가에서 이 Outbox에는 {@code PENDING} row만 생긴다 — 쿠폰 적용이 마지막 단계라
- * 그 뒤에 실패할 스텝이 없어 보상 요청을 만들 일이 없다. 그럼에도 UNIQUE에
- * {@code request_status}를 포함해 두는 것은 {@link ProductOutbox}와 계약을 같게 맞춰,
- * 나중에 단계가 추가될 때 여기만 다른 규칙이라 놓치는 일이 없게 하기 위해서다.
- */
 @Getter
 @Entity
 @Table(name = "coupon_outbox",

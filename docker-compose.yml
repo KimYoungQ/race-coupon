@@ -13,7 +13,7 @@ services:
       MYSQL_USER: cpuser
       MYSQL_PASSWORD: cppass
       TZ: Asia/Seoul
-    volumes:
+    volumes:  
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
     command:
       - --character-set-server=utf8mb4

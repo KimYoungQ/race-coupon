@@ -6,13 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * 사가 응답에 실리는 금액의 정합성.
- *
- * <p>{@code CouponResponse}는 {@code discountAmount}와 {@code finalAmount}를 함께 실어 보내고
- * order-service는 그 둘을 그대로 주문에 기록한다. 두 값이 서로 어긋나면 주문 이력이
- * {@code total - discount != final}인 상태로 남는데, 그 시점에는 아무도 예외를 던지지 않는다.
- */
 class CouponSagaAmountTest {
 
     private Coupon fixedAmount(long value) {
@@ -51,7 +44,6 @@ class CouponSagaAmountTest {
         @Test
         @DisplayName("원가를 넘는 정액 쿠폰이어도 할인액이 원가를 넘지 않는다")
         void never_exceeds_price() {
-            // 정책이 계산하는 값은 5000이지만 실제로 깎이는 것은 1000원뿐이다.
             Coupon coupon = fixedAmount(5_000L);
             long price = 1_000L;
 
@@ -96,10 +88,8 @@ class CouponSagaAmountTest {
             Coupon coupon = percent(10L, null, 50_000L);
             long price = 10_000L;
 
-            // 데코레이터만 믿으면 "할인 0으로 정상 완료"가 되어 쿠폰만 소진된다.
             assertThat(coupon.discountFor(price)).isZero();
             assertThat(coupon.finalPrice(price)).isEqualTo(price);
-            // 그래서 사가는 이 판정으로 먼저 걸러 명시적으로 실패시킨다.
             assertThat(coupon.satisfiesMinOrderAmount(price)).isFalse();
         }
     }

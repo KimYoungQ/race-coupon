@@ -41,21 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
-/**
- * 사가의 첫 단추 — 주문 접수가 재고 요청 발행까지 이어지는지 본다.
- *
- * <p>여기서 확인하는 것은 네 가지다.
- * <ol>
- *   <li>주문과 Outbox가 <b>같은 트랜잭션</b>에서 함께 저장된다</li>
- *   <li>주문 접수만으로는 <b>아무것도 발행되지 않는다</b> — 적재와 발행이 분리돼 있다</li>
- *   <li>스케줄러 폴링이 {@code product-request}로 실제 메시지를 내보낸다</li>
- *   <li>파티션 키가 {@code productId}다 — 이게 재고 직렬화 전략의 전제다</li>
- * </ol>
- *
- * <p>테스트 프로파일은 백그라운드 타이머를 사실상 꺼두고(주기 1시간), 발행이 필요한 시점에
- * {@link ProductOutboxScheduler#publishPending()}을 직접 호출한다. 타이머를 기다리지 않아
- * 빠르고, 같은 row가 두 번 발행되는 일이 없어 관측이 흔들리지 않는다.
- */
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 3, topics = SagaTopics.PRODUCT_REQUEST)
 class OrderSagaStartTest {
@@ -93,7 +78,6 @@ class OrderSagaStartTest {
     @BeforeEach
     void setUp() {
         productOutboxRepository.deleteAllInBatch();
-        // deleteAllInBatch는 cascade를 타지 않아 order_item의 FK에 걸린다. 품목은 orphanRemoval로 지운다.
         orderRepository.deleteAll();
 
         Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "saga-start-test", true);
@@ -106,9 +90,6 @@ class OrderSagaStartTest {
                 .createConsumer();
         broker.consumeFromAnEmbeddedTopic(consumer, SagaTopics.PRODUCT_REQUEST);
 
-        // 임베디드 브로커는 클래스 안의 테스트들이 공유한다. 앞선 테스트가 남긴 레코드를 비워
-        // 각 테스트가 깨끗한 지점에서 시작하게 한다 — 특히 "아무것도 발행되지 않는다"를
-        // 확인하는 테스트는 이걸 빼면 남의 메시지를 보고 실패한다.
         KafkaTestUtils.getRecords(consumer, Duration.ofMillis(500));
     }
 
@@ -135,7 +116,6 @@ class OrderSagaStartTest {
         ProductOutbox outbox = outboxes.get(0);
         assertThat(outbox.getSagaId()).isEqualTo(order.getSagaId());
         assertThat(outbox.getOrderId()).isEqualTo(order.getId());
-        // 정상 요청이므로 PENDING이다. 보상 요청과 구분하는 유일한 기준이다.
         assertThat(outbox.getRequestStatus()).isEqualTo(StockOrderStatus.PENDING);
         assertThat(outbox.getSagaStatus()).isEqualTo(SagaStatus.STARTED);
         assertThat(outbox.getOrderStatus()).isEqualTo(OrderStatus.CREATED);
@@ -165,7 +145,6 @@ class OrderSagaStartTest {
         ConsumerRecord<String, StockRequest> record =
                 KafkaTestUtils.getSingleRecord(consumer, SagaTopics.PRODUCT_REQUEST, Duration.ofSeconds(10));
 
-        // 같은 상품의 예약과 복구가 한 파티션에서 직렬화되려면 키가 productId여야 한다
         assertThat(record.key()).isEqualTo(String.valueOf(PRODUCT_ID));
 
         StockRequest request = record.value();
@@ -185,7 +164,6 @@ class OrderSagaStartTest {
 
         productOutboxScheduler.publishPending();
 
-        // 발행 콜백은 Kafka IO 스레드에서 비동기로 돌아 상태 갱신이 조금 늦는다
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             ProductOutbox outbox = productOutboxRepository.findAll().get(0);
             assertThat(outbox.getOutboxStatus()).isEqualTo(OutboxStatus.COMPLETED);
@@ -193,7 +171,6 @@ class OrderSagaStartTest {
             assertThat(outbox.getPublishAttempts()).isPositive();
         });
 
-        // 사가 진행도는 응답을 받기 전까지 STARTED 그대로다 — 발행 여부와 축이 다르다
         assertThat(productOutboxRepository.findAll().get(0).getSagaStatus()).isEqualTo(SagaStatus.STARTED);
         assertThat(orderRepository.findById(response.orderId()).orElseThrow().getStatus())
                 .isEqualTo(OrderStatus.CREATED);
@@ -207,11 +184,9 @@ class OrderSagaStartTest {
         UUID outboxId = productOutboxRepository.findAll().get(0).getId();
         corruptPayload(outboxId);
 
-        // 스케줄러가 배치를 forEach로 돌기 때문에, 여기서 예외가 새면 뒤의 row들이 볼모가 된다
         assertThatCode(() -> sagaRequestPublisher.publish(outboxId, SagaChannel.PRODUCT))
                 .doesNotThrowAnyException();
 
-        // 발행되지 않았으니 STARTED로 남아 다음 폴링이 다시 집는다 — 유실이 아니다
         assertThat(productOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
                 .isEqualTo(OutboxStatus.STARTED);
         assertThat(orderRepository.findById(response.orderId()).orElseThrow().getStatus())
@@ -221,7 +196,6 @@ class OrderSagaStartTest {
     @Test
     @DisplayName("깨진 row 한 건이 같은 배치의 나머지 발행을 막지 않는다")
     void poison_row_does_not_block_the_batch() {
-        // 깨진 주문을 먼저 만들어 배치에서 앞에 오게 한다
         OrderCreateResponse poisoned = orderService.create(
                 USER_ID, new OrderCreateRequest(PRODUCT_ID, 1, null));
         OrderCreateResponse healthy = orderService.create(
@@ -254,7 +228,6 @@ class OrderSagaStartTest {
                 .getId();
     }
 
-    /** 역직렬화가 깨지는 상황을 만든다. 엔티티에 setter가 없어 DB를 직접 건드린다. */
     private void corruptPayload(UUID outboxId) {
         jdbcTemplate.update("UPDATE product_outbox SET payload = ? WHERE id = ?",
                 "not-a-json", outboxId.toString());
@@ -268,7 +241,6 @@ class OrderSagaStartTest {
         ProductOutbox outbox = productOutboxRepository.findAll().get(0);
         StockRequest request = sagaPayloadCodec.deserialize(outbox.getPayload(), StockRequest.class);
 
-        // 메시지 id와 Outbox PK가 같아야 로그 한 줄로 DB row와 Kafka 메시지를 이어 볼 수 있다
         assertThat(request.id()).isEqualTo(outbox.getId());
         assertThat(request.quantity()).isEqualTo(3);
     }

@@ -9,7 +9,7 @@ import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.coupon.couponservice.service.CouponService;
-import org.coupon.couponservice.service.KafkaCouponIssueService;
+import org.coupon.couponservice.service.CouponIssueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CouponIssueController implements CouponIssueControllerApi {
 
-    private final KafkaCouponIssueService kafkaCouponIssueService;
+    private final CouponIssueService couponIssueService;
     private final CouponService couponService;
     private final CouponIssueMetrics metrics;
 
@@ -37,11 +37,6 @@ public class CouponIssueController implements CouponIssueControllerApi {
         return ResponseEntity.ok(ApiResponse.success(couponService.findIssuable(user.getUserId())));
     }
 
-    /**
-     * 발급 주체는 <b>이 서비스가 직접 검증한</b> 토큰의 {@code sub}에서만 얻는다.
-     * 헤더나 쿼리 파라미터로 받으면 값을 적어 보내는 쪽이 주체를 정하게 되어 타인 명의 발급이 가능해진다.
-     * 게이트웨이가 앞에서 한 번 걸러주지만, 우회 호출에 대비해 JwtAuthenticationFilter가 여기서도 재검증한다.
-     */
     @PostMapping("/{couponId}/issue")
     public ResponseEntity<ApiResponse<CouponIssueAcceptedResponse>> issue(
             @PathVariable Long couponId,
@@ -49,13 +44,13 @@ public class CouponIssueController implements CouponIssueControllerApi {
         Long userId = user.getUserId();
         metrics.requested();
         log.info("쿠폰 발급 요청: couponId={}, userId={}", couponId, userId);
-        CouponIssueAcceptedResponse response = kafkaCouponIssueService.issue(couponId, userId);
+        CouponIssueAcceptedResponse response = couponIssueService.issue(couponId, userId);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));
     }
 
     @GetMapping("/{couponId}")
     public ResponseEntity<ApiResponse<CouponIssueResponse>> getCoupon(@PathVariable Long couponId) {
-        return ResponseEntity.ok(ApiResponse.success(kafkaCouponIssueService.getCouponInfo(couponId)));
+        return ResponseEntity.ok(ApiResponse.success(couponIssueService.getCouponInfo(couponId)));
     }
 }

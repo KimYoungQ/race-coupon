@@ -23,7 +23,6 @@ public class OpenApiConfig {
                         .title("User Service API")
                         .version("v1")
                         .description("회원가입·로그인·토큰 재발급 API. 로그인 성공 시 Access/Refresh 토큰을 발급한다."))
-                // "/"는 UI를 서빙한 오리진(게이트웨이 또는 서비스 포트)을 기준으로 Try it out을 보낸다.
                 .servers(List.of(new Server().url("/")))
                 .components(new Components().addSecuritySchemes(BEARER_SCHEME,
                         new SecurityScheme()

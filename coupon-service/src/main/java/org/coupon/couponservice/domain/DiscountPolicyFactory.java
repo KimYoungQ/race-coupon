@@ -1,9 +1,5 @@
 package org.coupon.couponservice.domain;
 
-/**
- * 쿠폰으로부터 할인 정책을 조립한다.
- * 할인 유형({@link DiscountType})으로 기본 전략을 고르고, 쿠폰에 설정된 조건을 데코레이터로 겹쳐 감싼다.
- */
 public class DiscountPolicyFactory {
 
     private DiscountPolicyFactory() {

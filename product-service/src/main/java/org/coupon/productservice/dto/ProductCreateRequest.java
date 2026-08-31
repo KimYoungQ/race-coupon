@@ -4,10 +4,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * 관리자 상품 등록 요청. 재고 초기값은 여기서만 정해진다 —
- * 등록 이후의 재고 변경 경로는 주문 Saga의 Kafka 커맨드뿐이다.
- */
 public record ProductCreateRequest(
 
         @NotBlank(message = "상품명은 필수입니다")

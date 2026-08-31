@@ -18,12 +18,6 @@ import org.coupon.userservice.dto.response.SignupResponse;
 import org.coupon.userservice.dto.response.TokenResponse;
 import org.springframework.http.ResponseEntity;
 
-/**
- * 인증 API 문서화 인터페이스. Swagger 애노테이션을 여기에 모아 컨트롤러를 깨끗하게 유지한다.
- *
- * <p>세 엔드포인트 모두 토큰 없이 호출하므로 {@code @SecurityRequirements}(빈 값)로
- * 전역 bearerAuth 요구를 해제한다 — UI에 잠금 아이콘이 뜨지 않는다.
- */
 @Tag(name = "인증", description = "회원가입 · 로그인 · 토큰 재발급 (토큰 없이 호출)")
 public interface AuthControllerApi {
 

@@ -17,7 +17,7 @@ class DiscountPolicyTest {
         void discount() {
             assertThat(new RateDiscountPolicy(10L).discount(10000L)).isEqualTo(1000L);
             assertThat(new RateDiscountPolicy(100L).discount(10000L)).isEqualTo(10000L);
-            assertThat(new RateDiscountPolicy(10L).discount(9999L)).isEqualTo(999L); // 999.9 → 999
+            assertThat(new RateDiscountPolicy(10L).discount(9999L)).isEqualTo(999L);
         }
     }
 

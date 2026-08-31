@@ -6,10 +6,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 회원가입 요청. password는 평문으로 들어오며 Service에서 즉시 인코딩된다 —
- * 이 객체를 그대로 로그에 남기지 않는다.
- */
 @Getter
 @NoArgsConstructor
 public class SignupRequest {

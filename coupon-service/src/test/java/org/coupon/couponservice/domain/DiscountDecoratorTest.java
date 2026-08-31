@@ -17,7 +17,6 @@ class DiscountDecoratorTest {
         void caps() {
             DiscountPolicy policy = new MaxDiscountDecorator(new RateDiscountPolicy(20L), 30000L);
 
-            // 200,000 * 20% = 40,000 → 한도 30,000
             assertThat(policy.discount(200000L)).isEqualTo(30000L);
         }
 
@@ -26,7 +25,6 @@ class DiscountDecoratorTest {
         void underCap() {
             DiscountPolicy policy = new MaxDiscountDecorator(new RateDiscountPolicy(10L), 30000L);
 
-            // 100,000 * 10% = 10,000 → 한도 미만
             assertThat(policy.discount(100000L)).isEqualTo(10000L);
         }
     }
@@ -57,7 +55,6 @@ class DiscountDecoratorTest {
     class Composed {
 
         private DiscountPolicy policy() {
-            // 정률 20% + 최대 30,000 한도 + 최소 주문 50,000
             return new MinOrderAmountDecorator(
                     new MaxDiscountDecorator(new RateDiscountPolicy(20L), 30000L),
                     50000L);
@@ -66,14 +63,12 @@ class DiscountDecoratorTest {
         @Test
         @DisplayName("게이트 통과 시 한도 캡이 적용된다")
         void passGateAndCap() {
-            // 200,000 ≥ 50,000 통과 → 40,000 → 한도 30,000
             assertThat(policy().discount(200000L)).isEqualTo(30000L);
         }
 
         @Test
         @DisplayName("게이트 미달이면 캡·계산과 무관하게 0이다")
         void gateBlocksAll() {
-            // 40,000 < 50,000 → 0
             assertThat(policy().discount(40000L)).isEqualTo(0L);
         }
     }
@@ -92,10 +87,9 @@ class DiscountDecoratorTest {
                     .discountValue(20L)
                     .build();
 
-            DiscountPolicy base = DiscountPolicyFactory.create(coupon); // RateDiscountPolicy(20)
+            DiscountPolicy base = DiscountPolicyFactory.create(coupon);
             DiscountPolicy policy = new MaxDiscountDecorator(base, 30000L);
 
-            // 200,000 * 20% = 40,000 → 한도 30,000
             assertThat(policy.discount(200000L)).isEqualTo(30000L);
         }
 
@@ -109,10 +103,9 @@ class DiscountDecoratorTest {
                     .discountValue(50000L)
                     .build();
 
-            DiscountPolicy base = DiscountPolicyFactory.create(coupon); // FixDiscountPolicy(50000)
+            DiscountPolicy base = DiscountPolicyFactory.create(coupon);
             DiscountPolicy policy = new MaxDiscountDecorator(base, 30000L);
 
-            // 정액 50,000 → 한도 30,000
             assertThat(policy.discount(200000L)).isEqualTo(30000L);
         }
 
@@ -130,8 +123,8 @@ class DiscountDecoratorTest {
                     new MaxDiscountDecorator(DiscountPolicyFactory.create(coupon), 30000L),
                     50000L);
 
-            assertThat(policy.discount(200000L)).isEqualTo(30000L); // 게이트 통과 + 캡
-            assertThat(policy.discount(40000L)).isEqualTo(0L);      // 게이트 미달
+            assertThat(policy.discount(200000L)).isEqualTo(30000L);
+            assertThat(policy.discount(40000L)).isEqualTo(0L);
         }
     }
 
@@ -149,13 +142,12 @@ class DiscountDecoratorTest {
                     .discountValue(10L)
                     .build();
 
-            assertThat(coupon.finalPrice(10000L)).isEqualTo(9000L); // 1,000 할인
+            assertThat(coupon.finalPrice(10000L)).isEqualTo(9000L);
         }
 
         @Test
         @DisplayName("최대 한도·최소 주문 조건이 있으면 finalPrice가 자동으로 겹쳐 적용한다")
         void withConditions() {
-            // 정률 20% + 최대 30,000 + 최소 주문 50,000
             Coupon coupon = Coupon.builder()
                     .title("조건 쿠폰")
                     .totalQuantity(100L)
@@ -165,9 +157,7 @@ class DiscountDecoratorTest {
                     .minOrderAmount(50000L)
                     .build();
 
-            // 200,000: 40,000 → 한도 30,000 → finalPrice 170,000
             assertThat(coupon.finalPrice(200000L)).isEqualTo(170000L);
-            // 40,000 < 50,000: 게이트 미달 → 할인 0 → finalPrice 40,000
             assertThat(coupon.finalPrice(40000L)).isEqualTo(40000L);
         }
 
@@ -182,8 +172,8 @@ class DiscountDecoratorTest {
                     .minOrderAmount(50000L)
                     .build();
 
-            assertThat(coupon.finalPrice(60000L)).isEqualTo(54000L); // 6,000 할인
-            assertThat(coupon.finalPrice(40000L)).isEqualTo(40000L); // 게이트 미달
+            assertThat(coupon.finalPrice(60000L)).isEqualTo(54000L);
+            assertThat(coupon.finalPrice(40000L)).isEqualTo(40000L);
         }
     }
 }

@@ -15,10 +15,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * 인증 대상 사용자. id가 JWT의 sub 클레임이 되고, 다운스트림 서비스가 토큰을 재검증해 이 값을 복원한다.
- * password는 반드시 BCrypt로 인코딩된 값만 담는다 — 평문을 넣지 않도록 빌더가 encodedPassword로 받는다.
- */
 @Getter
 @Entity
 @Table(name = "users")
@@ -35,7 +31,6 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    /** BCrypt 해시. 평문 금지. */
     @Column(nullable = false)
     private String password;
 
@@ -49,9 +44,6 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    /**
-     * @param encodedPassword PasswordEncoder.encode()를 거친 값이어야 한다
-     */
     @Builder
     private User(String username, String email, String encodedPassword, UserRole role) {
         this.username = username;

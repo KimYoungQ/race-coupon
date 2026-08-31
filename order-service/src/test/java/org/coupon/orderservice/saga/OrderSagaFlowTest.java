@@ -29,13 +29,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * 사가 전 구간. 요청 적재부터 응답 수신, 보상까지 <b>주문이 실제로 끝까지 도는지</b> 본다.
- *
- * <p>Kafka를 거치지 않고 사가 스텝을 직접 호출한다 — 검증 대상이 메시징이 아니라
- * "상태가 순서대로 전이되는가", "중복 응답에 금액이 두 번 반영되지 않는가",
- * "보상이 원래 실패 원인을 지키는가"이기 때문이다.
- */
 @SpringBootTest
 class OrderSagaFlowTest {
 
@@ -74,22 +67,15 @@ class OrderSagaFlowTest {
     void setUp() {
         productOutboxRepository.deleteAllInBatch();
         couponOutboxRepository.deleteAllInBatch();
-        // deleteAllInBatch는 cascade를 타지 않아 order_item의 FK에 걸린다
         orderRepository.deleteAll();
     }
 
-    /** 주문을 접수하고 사가 상관 키를 돌려준다. */
     private Order placeOrder(Long couponId) {
         Long orderId = orderService.create(
                 USER_ID, new OrderCreateRequest(PRODUCT_ID, QUANTITY, couponId)).orderId();
         return orderRepository.findById(orderId).orElseThrow();
     }
 
-    /**
-     * 품목까지 함께 읽는다. {@code open-in-view: false}라 트랜잭션 밖에서 LAZY 컬렉션을 건드리면
-     * {@code LazyInitializationException}이 난다 — 사가 스텝은 자기 트랜잭션 안에서 접근하므로
-     * 무관하지만, 검증하는 쪽은 join fetch로 가져와야 한다.
-     */
     private Order reload(Order order) {
         return orderRepository.findByIdAndUserIdWithItems(order.getId(), USER_ID).orElseThrow();
     }
@@ -126,10 +112,8 @@ class OrderSagaFlowTest {
 
             Order afterStock = reload(order);
             assertThat(afterStock.getStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
-            // 응답이 실어온 단가로 총액이 확정된다
             assertThat(afterStock.getTotalAmount()).isEqualTo(TOTAL);
             assertThat(afterStock.primaryItem().getProductName()).isEqualTo("무선 이어폰");
-            // 다음 단계가 '기록'됐다 — 아직 발행되지는 않았다
             assertThat(couponOutboxRepository.findAll()).hasSize(1);
 
             orderCouponSaga.couponApplied(couponResponse(order, CouponStatus.APPLIED, null));
@@ -186,7 +170,6 @@ class OrderSagaFlowTest {
             Order failed = reload(order);
             assertThat(failed.getStatus()).isEqualTo(OrderStatus.FAILED);
             assertThat(failed.getFailureCode()).isEqualTo("PRODUCT_OUT_OF_STOCK");
-            // 보상 요청을 만들지 않았다
             assertThat(productOutboxHelper.find(order.getSagaId(), StockOrderStatus.CANCELLED))
                     .isEmpty();
         }
@@ -217,8 +200,6 @@ class OrderSagaFlowTest {
             orderCouponSaga.couponFailed(
                     couponResponse(order, CouponStatus.FAILED, "COUPON_ALREADY_USED"));
 
-            // UNIQUE(saga_id, request_status)가 없으면 이 INSERT가 충돌해
-            // 보상이 영원히 발행되지 않는다 — 정상 시나리오로는 절대 드러나지 않는 버그다
             assertThat(productOutboxRepository.findAll()).hasSize(2);
             assertThat(productOutboxHelper.find(order.getSagaId(), StockOrderStatus.PENDING)).isPresent();
             assertThat(productOutboxHelper.find(order.getSagaId(), StockOrderStatus.CANCELLED)).isPresent();
@@ -236,8 +217,6 @@ class OrderSagaFlowTest {
 
             Order failed = reload(order);
             assertThat(failed.getStatus()).isEqualTo(OrderStatus.FAILED);
-            // 사가를 무너뜨린 원인은 "재고를 되돌렸다"가 아니라 "쿠폰이 이미 사용됨"이다.
-            // 여기서 fail()을 썼다면 이 값이 덮였을 것이다.
             assertThat(failed.getFailureCode()).isEqualTo("COUPON_ALREADY_USED");
             assertThat(productOutboxHelper.find(order.getSagaId(), StockOrderStatus.CANCELLED)
                     .orElseThrow().getSagaStatus())
@@ -276,7 +255,6 @@ class OrderSagaFlowTest {
             Order after = reload(order);
             assertThat(after.getStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
             assertThat(after.getTotalAmount()).isEqualTo(TOTAL);
-            // 쿠폰 요청도 한 번만 적재된다
             assertThat(couponOutboxRepository.findAll()).hasSize(1);
         }
 
@@ -301,7 +279,6 @@ class OrderSagaFlowTest {
             orderProductSaga.stockReserved(stockResponse(order, StockStatus.RESERVED, null));
             assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.COMPLETED);
 
-            // 기대 상태 조회에서 걸러지므로 도메인 가드까지 가지 않는다
             orderProductSaga.stockRestored(stockResponse(order, StockStatus.RESTORED, null));
             orderProductSaga.stockFailed(stockResponse(order, StockStatus.FAILED, "LATE"));
 

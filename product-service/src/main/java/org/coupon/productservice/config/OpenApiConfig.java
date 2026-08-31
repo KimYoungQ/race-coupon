@@ -23,7 +23,6 @@ public class OpenApiConfig {
                         .title("Product Service API")
                         .version("v1")
                         .description("상품 등록·조회 API. 재고는 주문 Saga의 Kafka 커맨드로만 변경된다."))
-                // "/"는 UI를 서빙한 오리진(게이트웨이 또는 서비스 포트)을 기준으로 Try it out을 보낸다.
                 .servers(List.of(new Server().url("/")))
                 .components(new Components().addSecuritySchemes(BEARER_SCHEME,
                         new SecurityScheme()

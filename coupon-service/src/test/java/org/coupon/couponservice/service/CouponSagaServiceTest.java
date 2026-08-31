@@ -29,13 +29,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-/**
- * 사가 참여자로서 coupon-service의 계약을 고정한다.
- *
- * <p>Kafka를 거치지 않고 서비스를 직접 호출한다 — 검증 대상이 메시징이 아니라
- * "요청이 실어온 {@code couponId}로 발급 건을 찾아내는가", "비즈니스 실패가 예외가 아니라 응답이 되는가",
- * "실린 금액이 서로 정합한가"이기 때문이다.
- */
 @SpringBootTest
 class CouponSagaServiceTest {
 
@@ -72,7 +65,6 @@ class CouponSagaServiceTest {
         couponId = saveCoupon(null);
     }
 
-    /** 10% 할인 쿠폰. {@code minOrderAmount}가 null이면 최소 금액 조건 없음. */
     private Long saveCoupon(Long minOrderAmount) {
         return couponRepository.save(Coupon.builder()
                 .title("10% 할인")
@@ -125,7 +117,6 @@ class CouponSagaServiceTest {
 
             CouponResponse response = responseOf(onlyOutbox());
             assertThat(response.couponStatus()).isEqualTo(CouponStatus.APPLIED);
-            // 요청은 couponId만 실어 왔다. 무엇이 소진됐는지는 응답이 알려준다.
             assertThat(response.issuedCouponId()).isEqualTo(issued.getId());
             assertThat(response.discountAmount()).isEqualTo(10_000L);
             assertThat(response.finalAmount()).isEqualTo(90_000L);
@@ -146,7 +137,6 @@ class CouponSagaServiceTest {
         @Test
         @DisplayName("발급이 아직 반영되지 않았으면 COUPON_NOT_ISSUED_YET으로 답한다")
         void not_issued_yet() {
-            // 발급 API의 201은 Redis 수량 확보까지만 뜻한다. row는 컨슈머가 나중에 만든다.
             assertThatCode(() ->
                     couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT)))
                     .doesNotThrowAnyException();
@@ -165,7 +155,6 @@ class CouponSagaServiceTest {
             couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT));
             orderOutboxRepository.deleteAllInBatch();
 
-            // 다른 주문이 같은 쿠폰을 쓰려 한다
             CouponRequest other = new CouponRequest(UUID.randomUUID(), UUID.randomUUID(), 999L,
                     USER_ID, couponId, ORDER_AMOUNT, CouponOrderStatus.PENDING, Instant.now());
             assertThatCode(() -> couponSagaService.handle(other)).doesNotThrowAnyException();
@@ -174,7 +163,6 @@ class CouponSagaServiceTest {
             assertThat(response.couponStatus()).isEqualTo(CouponStatus.FAILED);
             assertThat(response.failureMessages())
                     .containsExactly(ErrorCode.COUPON_ALREADY_USED.getCode());
-            // 원래 주인은 그대로다
             assertThat(issuedCouponRepository.findById(issued.getId()).orElseThrow().getOrderId())
                     .isEqualTo(ORDER_ID);
         }
@@ -190,7 +178,6 @@ class CouponSagaServiceTest {
             CouponResponse response = responseOf(onlyOutbox());
             assertThat(response.failureMessages())
                     .containsExactly(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET.getCode());
-            // 조용히 완료됐다면 사용자는 이유를 모르는데 쿠폰만 소진된다
             assertThat(issuedCouponRepository.findById(issued.getId()).orElseThrow().getStatus())
                     .isEqualTo(IssuedCouponStatus.ISSUED);
         }
@@ -220,13 +207,11 @@ class CouponSagaServiceTest {
             CouponRequest first = request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT);
             couponSagaService.handle(first);
 
-            // 응답이 이미 나갔다고 가정한다
             UUID outboxId = onlyOutbox().getId();
             orderOutboxPublishState.markPublished(outboxId);
             assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
                     .isEqualTo(OutboxStatus.COMPLETED);
 
-            // 그런데도 같은 요청이 또 왔다 = 조정자가 그 응답을 받지 못했다는 뜻이다
             couponSagaService.handle(sameSaga(first, CouponOrderStatus.PENDING));
 
             assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
@@ -261,8 +246,6 @@ class CouponSagaServiceTest {
             couponSagaService.handle(apply);
             couponSagaService.handle(sameSaga(apply, CouponOrderStatus.CANCELLED));
 
-            // UNIQUE(saga_id, request_status)라 두 row가 공존한다.
-            // request_status를 빼면 여기서 충돌해 보상 응답이 아예 저장되지 못한다.
             assertThat(orderOutboxRepository.findAll()).hasSize(2);
             assertThat(orderOutboxHelper.findProcessed(apply.sagaId(), CouponOrderStatus.PENDING))
                     .isPresent();

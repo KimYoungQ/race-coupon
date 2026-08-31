@@ -19,12 +19,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-/**
- * 주문 생성·조회 API 문서화 인터페이스.
- *
- * <p>주문 주체는 클라이언트 입력이 아니라 <b>검증된 토큰의 sub</b>에서 얻으므로,
- * 인증 주체 파라미터는 {@code @Parameter(hidden = true)}로 문서에서 숨긴다.
- */
 @Tag(name = "주문", description = "주문 생성 · 내 주문 조회 (JWT 필요)")
 public interface OrderControllerApi {
 

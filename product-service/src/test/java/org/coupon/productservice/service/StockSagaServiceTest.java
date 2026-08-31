@@ -27,13 +27,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-/**
- * 사가 참여자로서 product-service의 계약을 고정한다.
- *
- * <p>Kafka를 거치지 않고 서비스를 직접 호출한다 — 여기서 검증하려는 것은 메시징이 아니라
- * "재고 변경과 응답 기록이 함께 일어나는가", "비즈니스 실패가 예외가 아니라 응답이 되는가",
- * "중복 요청에 도메인을 다시 실행하지 않는가"이기 때문이다.
- */
 @SpringBootTest
 class StockSagaServiceTest {
 
@@ -105,7 +98,6 @@ class StockSagaServiceTest {
 
             StockResponse response = responseOf(onlyOutbox());
             assertThat(response.stockStatus()).isEqualTo(StockStatus.RESERVED);
-            // 주문 쪽 Order.reserveStock(productName, unitPrice)이 이 값들로 총액을 확정한다
             assertThat(response.productName()).isEqualTo("무선 이어폰");
             assertThat(response.unitPrice()).isEqualTo(10_000L);
             assertThat(response.failureMessages()).isEmpty();
@@ -114,7 +106,6 @@ class StockSagaServiceTest {
         @Test
         @DisplayName("재고가 부족하면 예외가 아니라 실패 응답이 된다")
         void out_of_stock_becomes_failure_response() {
-            // 예외를 그대로 던지면 트랜잭션이 롤백되며 응답 row까지 사라져 사가가 멈춘다
             assertThatCode(() -> stockSagaService.handle(request(StockOrderStatus.PENDING, 999)))
                     .doesNotThrowAnyException();
 
@@ -164,13 +155,11 @@ class StockSagaServiceTest {
             StockRequest first = request(StockOrderStatus.PENDING, 2);
             stockSagaService.handle(first);
 
-            // 응답이 이미 나갔다고 가정한다
             UUID outboxId = onlyOutbox().getId();
             orderOutboxPublishState.markPublished(outboxId);
             assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
                     .isEqualTo(OutboxStatus.COMPLETED);
 
-            // 그런데도 같은 요청이 또 왔다 = 조정자가 그 응답을 받지 못했다는 뜻이다
             stockSagaService.handle(sameSaga(first, StockOrderStatus.PENDING));
 
             assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
@@ -203,8 +192,6 @@ class StockSagaServiceTest {
             stockSagaService.handle(reserve);
             stockSagaService.handle(sameSaga(reserve, StockOrderStatus.CANCELLED));
 
-            // UNIQUE(saga_id, request_status)라 두 row가 공존한다.
-            // request_status를 빼면 여기서 충돌해 보상 응답이 아예 저장되지 못한다.
             assertThat(orderOutboxRepository.findAll()).hasSize(2);
             assertThat(orderOutboxHelper.findProcessed(reserve.sagaId(), StockOrderStatus.PENDING))
                     .isPresent();

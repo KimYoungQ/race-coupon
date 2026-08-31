@@ -18,9 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 인증 API. 경로는 게이트웨이의 permitAll 목록과 일치해야 하므로 /api/v1/auth를 유지한다.
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -45,7 +42,6 @@ public class AuthController implements AuthControllerApi {
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(@Valid @RequestBody TokenRefreshRequest request) {
-        // 토큰 값 자체가 자격 증명이므로 로그에 남기지 않는다.
         log.info("토큰 재발급 API 호출");
         TokenResponse response = authService.refresh(request);
         return ResponseEntity.ok(ApiResponse.success(response));

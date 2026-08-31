@@ -17,9 +17,6 @@ public class CouponIssueRedisRepository {
 
     private final StringRedisTemplate redisTemplate;
 
-    /**
-     * @return 양수면 확정된 누적 발급 수, 0이면 이미 발급받은 사용자, -1이면 소진, -2면 TTL 무효
-     */
     public long issue(Long couponId, Long userId, long limit, long ttlSeconds) {
         Long result = redisTemplate.execute(
                 ISSUE,

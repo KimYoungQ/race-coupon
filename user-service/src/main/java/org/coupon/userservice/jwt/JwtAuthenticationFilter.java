@@ -21,10 +21,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Authorization 헤더의 Access Token을 검증해 SecurityContext에 인증을 채운다.
- * user-service 자체 보호용이며, 게이트웨이를 거치지 않는 직접 호출에도 동일하게 동작한다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -39,10 +35,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * 로그인·회원가입·토큰 재발급은 아직 토큰이 없거나 만료된 토큰을 들고 오는 경로다.
-     * 여기서 검증을 돌리면 정상 요청이 401로 막힌다.
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getRequestURI().startsWith(AUTH_PATH_PREFIX);
@@ -60,8 +52,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 authenticate(request, token);
             } catch (ExpiredTokenException | InvalidTokenException e) {
-                // 필터는 DispatcherServlet 밖이라 @ExceptionHandler가 잡지 못한다.
-                // 원인만 남기고 통과시키면 EntryPoint가 이 값을 읽어 401 본문을 만든다.
                 request.setAttribute(EXCEPTION_ATTRIBUTE, e);
             }
         }
@@ -72,8 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(HttpServletRequest request, String token) {
         jwtTokenProvider.validateToken(token);
 
-        // Refresh Token은 재발급 전용이다. 서명이 유효하다는 이유로 API 인증에 쓰이면
-        // 수명이 30분인 Access Token 대신 7일짜리 토큰으로 API를 호출할 수 있게 된다.
         if (!jwtTokenProvider.isAccessToken(token)) {
             throw new InvalidTokenException("Access Token이 아닙니다");
         }
@@ -84,9 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         UserDetails userDetails = User.builder()
                 .username(username)
-                // 토큰 인증이라 비밀번호를 대조할 일이 없다. UserDetails 계약을 채우기 위한 빈 값.
                 .password("")
-                // role 클레임에는 ROLE_이 없으므로 여기서 붙여야 hasRole(...)이 동작한다.
                 .authorities(List.of(new SimpleGrantedAuthority(ROLE_PREFIX + role)))
                 .build();
 
@@ -96,7 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // principal에는 username만 남아 userId가 유실된다. 컨트롤러가 꺼낼 수 있게 요청 속성으로 넘긴다.
         request.setAttribute(USER_ID_ATTRIBUTE, userId);
 
         log.debug("인증 성공: userId={}, role={}", userId, role);

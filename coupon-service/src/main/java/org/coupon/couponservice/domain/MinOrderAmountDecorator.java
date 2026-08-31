@@ -1,8 +1,5 @@
 package org.coupon.couponservice.domain;
 
-/**
- * 최소 주문 금액 데코레이터(적용 게이트). 주문금액({@code price})이 기준 미만이면 할인 0으로 단락한다.
- */
 public class MinOrderAmountDecorator implements DiscountPolicy {
 
     private final DiscountPolicy delegate;

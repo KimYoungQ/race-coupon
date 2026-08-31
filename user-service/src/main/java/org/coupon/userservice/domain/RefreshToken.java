@@ -13,10 +13,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * 서버가 보관하는 Refresh Token. Access Token과 달리 서버 측에서 폐기할 수 있어야 하므로 DB에 저장한다.
- * 사용자당 1건만 유지한다 — 재로그인하면 rotate()로 덮어써 이전 토큰을 무효화한다.
- */
 @Getter
 @Entity
 @Table(name = "refresh_tokens")
@@ -43,9 +39,6 @@ public class RefreshToken {
         this.expiresAt = expiresAt;
     }
 
-    /**
-     * 재로그인·재발급 시 기존 토큰을 새 토큰으로 교체한다(이전 토큰은 그 즉시 무효).
-     */
     public void rotate(String newToken, LocalDateTime newExpiresAt) {
         this.token = newToken;
         this.expiresAt = newExpiresAt;

@@ -18,11 +18,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * 인증되지 않은 요청의 401 응답을 만든다.
- * {@link JwtAuthenticationFilter}가 요청 속성에 남긴 실패 원인을 읽어
- * 만료(재발급 유도)와 위조(거부)를 클라이언트가 구분할 수 있게 한다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -50,7 +45,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
             code = ErrorCode.INVALID_TOKEN.getCode();
             message = ErrorCode.INVALID_TOKEN.getMessage();
         } else {
-            // 토큰을 아예 보내지 않았거나 보호된 경로에 익명으로 접근한 경우.
             code = UNAUTHORIZED_CODE;
             message = UNAUTHORIZED_MESSAGE;
         }
@@ -60,7 +54,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        // EntryPoint는 DispatcherServlet 이전이라 HttpMessageConverter를 쓸 수 없어 직접 직렬화한다.
         response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.error(code, message)));
     }
 }

@@ -37,15 +37,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-/**
- * 실제 Kafka를 거친 참여자 왕복. 지금까지의 테스트는 서비스를 직접 호출했으므로
- * <b>리스너·직렬화·파티션 배정이 실제로 도는지는 여기서 처음 확인된다.</b>
- *
- * <p>특히 마지막 테스트가 이 프로젝트의 핵심 주장을 검증한다 —
- * {@code Product}에 DB 락이 없는데도 동시 주문에서 재고가 정확한 이유는
- * {@code productId}를 파티션 키로 써서 같은 상품의 요청이 한 파티션에 직렬화되기 때문이다.
- * 그 전제가 실제로 성립하는지는 브로커 없이는 확인할 수 없다.
- */
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 3,
         topics = {SagaTopics.PRODUCT_REQUEST, SagaTopics.PRODUCT_RESPONSE})
@@ -88,7 +79,6 @@ class StockSagaKafkaTest {
                 props, new StringDeserializer(), new JsonDeserializer<>(StockResponse.class, false))
                 .createConsumer();
         broker.consumeFromAnEmbeddedTopic(consumer, SagaTopics.PRODUCT_RESPONSE);
-        // 앞선 테스트가 남긴 레코드를 비운다
         KafkaTestUtils.getRecords(consumer, Duration.ofMillis(500));
     }
 
@@ -99,7 +89,6 @@ class StockSagaKafkaTest {
         }
     }
 
-    /** 파티션 키는 productId다 — 같은 상품의 요청이 한 파티션에서 직렬화되게 하는 값. */
     private void sendRequest(long orderId, int quantity, StockOrderStatus status) {
         StockRequest request = new StockRequest(UUID.randomUUID(), UUID.randomUUID(), orderId,
                 productId, quantity, status, Instant.now());
@@ -115,19 +104,16 @@ class StockSagaKafkaTest {
     void full_round_trip_through_kafka() {
         sendRequest(100L, 2, StockOrderStatus.PENDING);
 
-        // 리스너가 소비해 재고를 깎고 응답 Outbox를 남길 때까지
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
             assertThat(stock()).isEqualTo(INITIAL_STOCK - 2);
             assertThat(orderOutboxRepository.findAll()).hasSize(1);
         });
 
-        // 발행은 스케줄러만 한다. 테스트 프로파일은 타이머를 꺼뒀으므로 직접 돌린다.
         orderOutboxScheduler.publishPending();
 
         ConsumerRecord<String, StockResponse> record = KafkaTestUtils.getSingleRecord(
                 consumer, SagaTopics.PRODUCT_RESPONSE, Duration.ofSeconds(15));
 
-        // 응답 키는 orderId다 — 같은 주문의 결과가 조정자에서 순차 처리되도록
         assertThat(record.key()).isEqualTo("100");
 
         StockResponse response = record.value();
@@ -153,15 +139,6 @@ class StockSagaKafkaTest {
         assertThat(stock()).as("실패했으므로 재고는 그대로다").isEqualTo(INITIAL_STOCK);
     }
 
-    /**
-     * <b>이 프로젝트가 학습하려는 바로 그 지점.</b>
-     *
-     * <p>{@code Product}에는 비관적 락도 {@code @Version}도 없다. 그런데도 재고보다 많은 동시 주문에서
-     * 초과 판매가 나지 않는 이유는 오직 하나다 — 모든 요청이 {@code productId}를 키로 발행되어
-     * <b>같은 파티션에 들어가고, 한 컨슈머 스레드가 순서대로 처리</b>하기 때문이다.
-     *
-     * <p>토픽을 쪼개거나 파티션 키를 바꾸면 이 테스트가 깨진다. 그때 깨지는 것이 이 테스트의 존재 이유다.
-     */
     @Test
     @DisplayName("재고 10에 20건이 동시에 몰려도 정확히 10건만 성공한다 — 초과 판매 0건")
     void concurrent_orders_never_oversell() {
@@ -200,12 +177,10 @@ class StockSagaKafkaTest {
         orderOutboxScheduler.publishPending();
         KafkaTestUtils.getSingleRecord(consumer, SagaTopics.PRODUCT_RESPONSE, Duration.ofSeconds(15));
 
-        // 같은 sagaId·같은 requestStatus로 다시 보낸다 (메시지 id만 다름)
         kafkaTemplate.send(SagaTopics.PRODUCT_REQUEST, String.valueOf(productId),
                 new StockRequest(UUID.randomUUID(), sagaId, 300L, productId, 3,
                         StockOrderStatus.PENDING, Instant.now()));
 
-        // 도메인은 다시 실행되지 않고, 기존 응답이 재발행 대상으로 표시된다
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() ->
                 assertThat(orderOutboxRepository.findAll().get(0).getOutboxStatus().name())
                         .isEqualTo("STARTED"));

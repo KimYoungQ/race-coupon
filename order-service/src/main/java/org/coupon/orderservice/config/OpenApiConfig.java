@@ -23,7 +23,6 @@ public class OpenApiConfig {
                         .title("Order Service API")
                         .version("v1")
                         .description("주문 생성·조회 API. 주문 주체는 검증된 토큰의 sub에서만 얻는다."))
-                // "/"는 UI를 서빙한 오리진(게이트웨이 또는 서비스 포트)을 기준으로 Try it out을 보낸다.
                 .servers(List.of(new Server().url("/")))
                 .components(new Components().addSecuritySchemes(BEARER_SCHEME,
                         new SecurityScheme()

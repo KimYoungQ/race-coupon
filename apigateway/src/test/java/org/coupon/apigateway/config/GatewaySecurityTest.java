@@ -81,7 +81,6 @@ class GatewaySecurityTest {
         webTestClient.get().uri(PROTECTED_PATH)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token("USER", "access", HOUR_MILLIS, secret)))
                 .exchange()
-                // 테스트에는 라우트가 없어 404가 난다. 401이 아니라는 것이 통과의 증거다.
                 .expectStatus().isNotFound();
     }
 

@@ -17,12 +17,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-/**
- * 상품 API 문서화 인터페이스.
- *
- * <p>등록은 {@code ADMIN} 역할이 필요하고, 인가는 컨트롤러의
- * {@code @PreAuthorize("hasRole('ADMIN')")}가 단독으로 판정한다.
- */
 @Tag(name = "상품", description = "상품 등록(관리자) · 조회 API (JWT 필요)")
 public interface ProductControllerApi {
 

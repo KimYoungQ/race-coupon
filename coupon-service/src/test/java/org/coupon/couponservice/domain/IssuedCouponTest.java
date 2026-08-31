@@ -9,9 +9,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * 발급 건의 사용·복구 계약. 사가의 마지막 단계가 이 도메인 위에서 돈다.
- */
 class IssuedCouponTest {
 
     private static final long USER_ID = 42L;

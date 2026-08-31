@@ -8,12 +8,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * ORDERS row가 곧 사가 인스턴스다. 이 테스트는 그 상태 머신의 계약을 고정한다.
- *
- * <p>여기의 가드는 불변식 보호인 동시에 <b>중복 응답에 대한 최종 방어선</b>이다.
- * Kafka는 at-least-once라 같은 응답이 두 번 도착할 수 있고, 그때 금액이 두 번 반영되면 안 된다.
- */
 class OrderSagaStateTest {
 
     private static final long USER_ID = 42L;
@@ -83,7 +77,6 @@ class OrderSagaStateTest {
             assertThat(order.getStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
             assertThat(order.primaryItem().getProductName()).isEqualTo("무선 이어폰");
             assertThat(order.primaryItem().getUnitPrice()).isEqualTo(10_000L);
-            // 총액을 인자로 받지 않고 단가 * 수량으로 직접 계산한다
             assertThat(order.getTotalAmount()).isEqualTo(20_000L);
             assertThat(order.getFinalAmount()).isEqualTo(20_000L);
         }
@@ -138,15 +131,9 @@ class OrderSagaStateTest {
             order.completeCompensation();
 
             assertThat(order.getStatus()).isEqualTo(OrderStatus.FAILED);
-            // 사가를 무너뜨린 원인은 "재고를 되돌렸다"가 아니라 "쿠폰이 이미 사용됨"이다
             assertThat(order.getFailureCode()).isEqualTo("COUPON_ALREADY_USED");
         }
 
-        /**
-         * fail()은 COMPENSATING에서도 열려 있다. 도메인이 막지 않으므로 규율은 호출부가 지킨다 —
-         * 이 테스트는 "막힌다"가 아니라 "안 막히고 원인이 덮인다"를 못 박아,
-         * 보상 완료 경로에서 fail()을 쓰면 무엇을 잃는지 코드로 남긴다.
-         */
         @Test
         @DisplayName("보상 완료에 fail()을 쓰면 원래 실패 원인이 덮인다 — completeCompensation()을 쓸 것")
         void fail_overwrites_original_cause_when_compensating() {
