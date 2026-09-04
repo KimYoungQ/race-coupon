@@ -1,6 +1,5 @@
 package org.coupon.orderservice.domain;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -23,17 +22,15 @@ public class OrderItem {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id")
     private Order order;
 
-    @Column(nullable = false)
     private Long productId;
 
     private String productName;
 
     private Long unitPrice;
 
-    @Column(nullable = false)
     private Integer quantity;
 
     @Builder

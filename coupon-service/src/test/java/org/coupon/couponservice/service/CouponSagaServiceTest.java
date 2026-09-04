@@ -1,35 +1,39 @@
 package org.coupon.couponservice.service;
 
-import org.coupon.common.event.CouponOrderStatus;
-import org.coupon.common.event.CouponRequest;
-import org.coupon.common.event.CouponResponse;
-import org.coupon.common.event.CouponStatus;
+import org.coupon.common.event.AggregateTypes;
+import org.coupon.common.event.CouponApplyRequestPayload;
+import org.coupon.common.event.CouponApplyResponsePayload;
+import org.coupon.common.event.CouponResult;
+import org.coupon.common.event.RequestType;
 import org.coupon.common.exception.ErrorCode;
-import org.coupon.common.outbox.OutboxStatus;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 import org.coupon.couponservice.domain.IssuedCoupon;
 import org.coupon.couponservice.domain.IssuedCouponStatus;
-import org.coupon.couponservice.domain.outbox.OrderOutbox;
+import org.coupon.couponservice.messaging.CouponApplyHandler;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
-import org.coupon.couponservice.repository.OrderOutboxRepository;
-import org.coupon.couponservice.service.outbox.OrderOutboxHelper;
-import org.coupon.couponservice.service.outbox.OrderOutboxPublishState;
+import org.coupon.couponservice.support.MySqlTestContainer;
+import org.coupon.sagapersistence.idempotency.ConsumedMessageRepository;
+import org.coupon.sagapersistence.outbox.OutboxEvent;
+import org.coupon.sagapersistence.outbox.OutboxEventRepository;
+import org.coupon.sagapersistence.outbox.SagaPayloadCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SpringBootTest
+@Import(MySqlTestContainer.class)
 class CouponSagaServiceTest {
 
     private static final long USER_ID = 42L;
@@ -37,7 +41,7 @@ class CouponSagaServiceTest {
     private static final long ORDER_AMOUNT = 100_000L;
 
     @Autowired
-    private CouponSagaService couponSagaService;
+    private CouponApplyHandler couponApplyHandler;
 
     @Autowired
     private CouponRepository couponRepository;
@@ -46,23 +50,26 @@ class CouponSagaServiceTest {
     private IssuedCouponRepository issuedCouponRepository;
 
     @Autowired
-    private OrderOutboxRepository orderOutboxRepository;
+    private OutboxEventRepository outboxEventRepository;
 
     @Autowired
-    private OrderOutboxHelper orderOutboxHelper;
+    private ConsumedMessageRepository consumedMessageRepository;
 
     @Autowired
-    private OrderOutboxPublishState orderOutboxPublishState;
+    private SagaPayloadCodec sagaPayloadCodec;
 
     private Long couponId;
+    private String sagaId;
 
     @BeforeEach
     void setUp() {
-        orderOutboxRepository.deleteAllInBatch();
+        outboxEventRepository.deleteAllInBatch();
+        consumedMessageRepository.deleteAllInBatch();
         issuedCouponRepository.deleteAllInBatch();
         couponRepository.deleteAllInBatch();
 
         couponId = saveCoupon(null);
+        sagaId = UUID.randomUUID().toString();
     }
 
     private Long saveCoupon(Long minOrderAmount) {
@@ -72,7 +79,7 @@ class CouponSagaServiceTest {
                 .discountType(DiscountType.PERCENT)
                 .discountValue(10L)
                 .minOrderAmount(minOrderAmount)
-                .eventEndAt(java.time.LocalDateTime.now().plusDays(1))
+                .eventEndAt(LocalDateTime.now().plusDays(1))
                 .build()).getId();
     }
 
@@ -81,46 +88,61 @@ class CouponSagaServiceTest {
                 IssuedCoupon.builder().userId(USER_ID).couponId(couponId).build());
     }
 
-    private CouponRequest request(CouponOrderStatus status, Long couponId, long orderAmount) {
-        return new CouponRequest(UUID.randomUUID(), UUID.randomUUID(), ORDER_ID,
-                USER_ID, couponId, orderAmount, status, Instant.now());
+    private String body(Long orderId, Long couponId, long orderAmount, RequestType type) {
+        return sagaPayloadCodec.serialize(
+                new CouponApplyRequestPayload(orderId, USER_ID, couponId, orderAmount, type));
     }
 
-    private CouponRequest sameSaga(CouponRequest origin, CouponOrderStatus status) {
-        return new CouponRequest(UUID.randomUUID(), origin.sagaId(), origin.orderId(),
-                origin.userId(), origin.couponId(), origin.orderAmount(), status, Instant.now());
+    private String handle(RequestType type, Long couponId, long orderAmount) {
+        return handle(ORDER_ID, type, couponId, orderAmount);
     }
 
-    private OrderOutbox onlyOutbox() {
-        assertThat(orderOutboxRepository.findAll()).hasSize(1);
-        return orderOutboxRepository.findAll().get(0);
+    private String handle(Long orderId, RequestType type, Long couponId, long orderAmount) {
+        String eventId = UUID.randomUUID().toString();
+        couponApplyHandler.handle(sagaId, eventId, body(orderId, couponId, orderAmount, type));
+        return eventId;
     }
 
-    private CouponResponse responseOf(OrderOutbox outbox) {
-        return orderOutboxHelper.toResponse(outbox);
+    private OutboxEvent onlyOutbox() {
+        assertThat(outboxEventRepository.findAll()).hasSize(1);
+        return outboxEventRepository.findAll().get(0);
+    }
+
+    private CouponApplyResponsePayload responseOf(OutboxEvent event) {
+        return sagaPayloadCodec.deserialize(event.getPayload(), CouponApplyResponsePayload.class);
+    }
+
+    private IssuedCoupon reload(IssuedCoupon issued) {
+        return issuedCouponRepository.findById(issued.getId()).orElseThrow();
     }
 
     @Nested
-    @DisplayName("쿠폰 적용(PENDING)")
+    @DisplayName("쿠폰 적용(REQUEST)")
     class Apply {
 
         @Test
-        @DisplayName("couponId로 발급 건을 찾아 소진하고 금액을 계산해 응답한다")
-        void applies_and_replies_with_amounts() {
+        @DisplayName("발급 건을 소진하고 금액을 계산하며, 응답 outbox 와 처리 원장이 같은 트랜잭션에 남는다")
+        void applies_and_records_response_outbox() {
             IssuedCoupon issued = issue(couponId);
 
-            couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT));
+            String eventId = handle(RequestType.REQUEST, couponId, ORDER_AMOUNT);
 
-            IssuedCoupon after = issuedCouponRepository.findById(issued.getId()).orElseThrow();
+            IssuedCoupon after = reload(issued);
             assertThat(after.getStatus()).isEqualTo(IssuedCouponStatus.USED);
             assertThat(after.getOrderId()).isEqualTo(ORDER_ID);
 
-            CouponResponse response = responseOf(onlyOutbox());
-            assertThat(response.couponStatus()).isEqualTo(CouponStatus.APPLIED);
-            assertThat(response.issuedCouponId()).isEqualTo(issued.getId());
+            OutboxEvent event = onlyOutbox();
+            assertThat(event.getAggregateType()).isEqualTo(AggregateTypes.COUPON_APPLY);
+            assertThat(event.getAggregateId()).isEqualTo(sagaId);
+            assertThat(event.getType()).isEqualTo("APPLIED");
+            CouponApplyResponsePayload response = responseOf(event);
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            assertThat(response.result()).isEqualTo(CouponResult.APPLIED);
             assertThat(response.discountAmount()).isEqualTo(10_000L);
             assertThat(response.finalAmount()).isEqualTo(90_000L);
-            assertThat(response.failureMessages()).isEmpty();
+            assertThat(response.failureCode()).isNull();
+
+            assertThat(consumedMessageRepository.existsById(eventId)).isTrue();
         }
 
         @Test
@@ -128,137 +150,105 @@ class CouponSagaServiceTest {
         void amounts_are_consistent() {
             issue(couponId);
 
-            couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT));
+            handle(RequestType.REQUEST, couponId, ORDER_AMOUNT);
 
-            CouponResponse response = responseOf(onlyOutbox());
+            CouponApplyResponsePayload response = responseOf(onlyOutbox());
             assertThat(response.discountAmount() + response.finalAmount()).isEqualTo(ORDER_AMOUNT);
         }
 
         @Test
-        @DisplayName("발급이 아직 반영되지 않았으면 COUPON_NOT_ISSUED_YET으로 답한다")
+        @DisplayName("발급이 아직 반영되지 않았으면 REJECTED + COUPON_NOT_ISSUED_YET 로 답한다")
         void not_issued_yet() {
-            assertThatCode(() ->
-                    couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT)))
+            assertThatCode(() -> handle(RequestType.REQUEST, couponId, ORDER_AMOUNT))
                     .doesNotThrowAnyException();
 
-            CouponResponse response = responseOf(onlyOutbox());
-            assertThat(response.couponStatus()).isEqualTo(CouponStatus.FAILED);
-            assertThat(response.issuedCouponId()).isNull();
-            assertThat(response.failureMessages())
-                    .containsExactly(ErrorCode.COUPON_NOT_ISSUED_YET.getCode());
+            CouponApplyResponsePayload response = responseOf(onlyOutbox());
+            assertThat(response.result()).isEqualTo(CouponResult.REJECTED);
+            assertThat(response.failureCode()).isEqualTo(ErrorCode.COUPON_NOT_ISSUED_YET.getCode());
+            assertThat(response.discountAmount()).isNull();
+            assertThat(response.finalAmount()).isNull();
         }
 
         @Test
-        @DisplayName("이미 사용된 쿠폰은 예외가 아니라 실패 응답이 된다")
-        void already_used_becomes_failure_response() {
+        @DisplayName("이미 사용된 쿠폰은 예외가 아니라 REJECTED + COUPON_ALREADY_USED 이고 원 주문은 유지된다")
+        void already_used_becomes_rejection_response() {
             IssuedCoupon issued = issue(couponId);
-            couponSagaService.handle(request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT));
-            orderOutboxRepository.deleteAllInBatch();
+            handle(RequestType.REQUEST, couponId, ORDER_AMOUNT);
+            outboxEventRepository.deleteAllInBatch();
 
-            CouponRequest other = new CouponRequest(UUID.randomUUID(), UUID.randomUUID(), 999L,
-                    USER_ID, couponId, ORDER_AMOUNT, CouponOrderStatus.PENDING, Instant.now());
-            assertThatCode(() -> couponSagaService.handle(other)).doesNotThrowAnyException();
+            assertThatCode(() -> handle(999L, RequestType.REQUEST, couponId, ORDER_AMOUNT))
+                    .doesNotThrowAnyException();
 
-            CouponResponse response = responseOf(onlyOutbox());
-            assertThat(response.couponStatus()).isEqualTo(CouponStatus.FAILED);
-            assertThat(response.failureMessages())
-                    .containsExactly(ErrorCode.COUPON_ALREADY_USED.getCode());
-            assertThat(issuedCouponRepository.findById(issued.getId()).orElseThrow().getOrderId())
-                    .isEqualTo(ORDER_ID);
+            CouponApplyResponsePayload response = responseOf(onlyOutbox());
+            assertThat(response.result()).isEqualTo(CouponResult.REJECTED);
+            assertThat(response.failureCode()).isEqualTo(ErrorCode.COUPON_ALREADY_USED.getCode());
+            assertThat(reload(issued).getOrderId()).isEqualTo(ORDER_ID);
         }
 
         @Test
-        @DisplayName("최소 주문 금액 미달은 조용한 할인 0이 아니라 명시적 실패다")
+        @DisplayName("최소 주문 금액 미달은 조용한 할인 0이 아니라 REJECTED 이고 쿠폰은 ISSUED 로 남는다")
         void min_order_amount_not_met_fails_explicitly() {
             Long gatedCouponId = saveCoupon(50_000L);
             IssuedCoupon issued = issue(gatedCouponId);
 
-            couponSagaService.handle(request(CouponOrderStatus.PENDING, gatedCouponId, 10_000L));
+            handle(RequestType.REQUEST, gatedCouponId, 10_000L);
 
-            CouponResponse response = responseOf(onlyOutbox());
-            assertThat(response.failureMessages())
-                    .containsExactly(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET.getCode());
-            assertThat(issuedCouponRepository.findById(issued.getId()).orElseThrow().getStatus())
-                    .isEqualTo(IssuedCouponStatus.ISSUED);
+            CouponApplyResponsePayload response = responseOf(onlyOutbox());
+            assertThat(response.result()).isEqualTo(CouponResult.REJECTED);
+            assertThat(response.failureCode())
+                    .isEqualTo(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET.getCode());
+            assertThat(reload(issued).getStatus()).isEqualTo(IssuedCouponStatus.ISSUED);
         }
     }
 
     @Nested
-    @DisplayName("멱등성")
+    @DisplayName("멱등성 — 같은 메시지(id 헤더)의 재전송")
     class Idempotency {
 
         @Test
-        @DisplayName("같은 요청을 다시 받아도 쿠폰이 두 번 소진되지 않는다")
-        void duplicate_request_does_not_apply_twice() {
-            issue(couponId);
-            CouponRequest first = request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT);
+        @DisplayName("같은 eventId 로 두 번 받아도 쿠폰은 한 번만 소진되고 응답도 한 건이다")
+        void same_event_id_is_processed_once() {
+            IssuedCoupon issued = issue(couponId);
+            String eventId = UUID.randomUUID().toString();
+            String body = body(ORDER_ID, couponId, ORDER_AMOUNT, RequestType.REQUEST);
 
-            couponSagaService.handle(first);
-            couponSagaService.handle(sameSaga(first, CouponOrderStatus.PENDING));
+            couponApplyHandler.handle(sagaId, eventId, body);
+            couponApplyHandler.handle(sagaId, eventId, body);
 
-            assertThat(orderOutboxRepository.findAll()).hasSize(1);
-            assertThat(responseOf(onlyOutbox()).couponStatus()).isEqualTo(CouponStatus.APPLIED);
-        }
-
-        @Test
-        @DisplayName("중복 요청은 무시가 아니라 기존 응답의 재발행으로 이어진다")
-        void duplicate_request_marks_existing_reply_for_republish() {
-            issue(couponId);
-            CouponRequest first = request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT);
-            couponSagaService.handle(first);
-
-            UUID outboxId = onlyOutbox().getId();
-            orderOutboxPublishState.markPublished(outboxId);
-            assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
-                    .isEqualTo(OutboxStatus.COMPLETED);
-
-            couponSagaService.handle(sameSaga(first, CouponOrderStatus.PENDING));
-
-            assertThat(orderOutboxRepository.findById(outboxId).orElseThrow().getOutboxStatus())
-                    .as("조용히 무시하면 사가가 응답을 영영 기다린다")
-                    .isEqualTo(OutboxStatus.STARTED);
+            assertThat(reload(issued).getStatus()).isEqualTo(IssuedCouponStatus.USED);
+            assertThat(outboxEventRepository.count()).isEqualTo(1);
+            assertThat(consumedMessageRepository.count()).isEqualTo(1);
+            assertThat(responseOf(onlyOutbox()).result()).isEqualTo(CouponResult.APPLIED);
         }
     }
 
     @Nested
-    @DisplayName("쿠폰 복구(CANCELLED)")
-    class Restore {
+    @DisplayName("쿠폰 복구(CANCEL)")
+    class Cancel {
 
         @Test
-        @DisplayName("사용을 되돌리면 다시 쓸 수 있는 상태가 된다")
-        void restores_coupon() {
+        @DisplayName("사용을 되돌리면 다시 쓸 수 있는 상태가 되고 CANCELLED 로 답한다")
+        void cancels_coupon() {
             IssuedCoupon issued = issue(couponId);
-            CouponRequest apply = request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT);
-            couponSagaService.handle(apply);
+            handle(RequestType.REQUEST, couponId, ORDER_AMOUNT);
+            outboxEventRepository.deleteAllInBatch();
 
-            couponSagaService.handle(sameSaga(apply, CouponOrderStatus.CANCELLED));
+            handle(RequestType.CANCEL, couponId, ORDER_AMOUNT);
 
-            IssuedCoupon after = issuedCouponRepository.findById(issued.getId()).orElseThrow();
+            IssuedCoupon after = reload(issued);
             assertThat(after.getStatus()).isEqualTo(IssuedCouponStatus.ISSUED);
             assertThat(after.getOrderId()).isNull();
+            OutboxEvent event = onlyOutbox();
+            assertThat(event.getType()).isEqualTo("CANCELLED");
+            assertThat(responseOf(event).result()).isEqualTo(CouponResult.CANCELLED);
         }
 
         @Test
-        @DisplayName("정상 응답과 보상 응답이 같은 sagaId 아래 함께 남는다")
-        void normal_and_compensation_replies_coexist() {
-            issue(couponId);
-            CouponRequest apply = request(CouponOrderStatus.PENDING, couponId, ORDER_AMOUNT);
-            couponSagaService.handle(apply);
-            couponSagaService.handle(sameSaga(apply, CouponOrderStatus.CANCELLED));
+        @DisplayName("되돌릴 발급 건이 없어도 CANCELLED 로 답한다 — 실패로 답하면 보상이 끝나지 못한다")
+        void cancel_without_issued_coupon_still_succeeds() {
+            handle(RequestType.CANCEL, couponId, ORDER_AMOUNT);
 
-            assertThat(orderOutboxRepository.findAll()).hasSize(2);
-            assertThat(orderOutboxHelper.findProcessed(apply.sagaId(), CouponOrderStatus.PENDING))
-                    .isPresent();
-            assertThat(orderOutboxHelper.findProcessed(apply.sagaId(), CouponOrderStatus.CANCELLED))
-                    .isPresent();
-        }
-
-        @Test
-        @DisplayName("되돌릴 쿠폰이 없어도 성공으로 답한다 — 실패로 답하면 보상이 끝나지 못한다")
-        void restore_without_issued_coupon_still_succeeds() {
-            couponSagaService.handle(request(CouponOrderStatus.CANCELLED, couponId, ORDER_AMOUNT));
-
-            assertThat(responseOf(onlyOutbox()).couponStatus()).isEqualTo(CouponStatus.RESTORED);
+            assertThat(responseOf(onlyOutbox()).result()).isEqualTo(CouponResult.CANCELLED);
         }
     }
 }

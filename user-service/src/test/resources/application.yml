@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: user-service-test
+
+  cloud:
+    config:
+      enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+      data-locations: []
+
+jwt:
+  secret: test-only-secret-key-for-hs256-minimum-32-bytes
+  access-token-validity: 1800
+  refresh-token-validity: 604800
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    org.coupon.userservice: INFO

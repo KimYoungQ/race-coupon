@@ -1,34 +1,19 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
-    // Spring Cloud Gateway는 WebFlux(리액티브) 기반. starter-web/webmvc를 넣으면 충돌하므로 금지.
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    // gateway actuator 엔드포인트(라우트 확인용)를 노출하려면 actuator가 필요하다.
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    // 메트릭을 /actuator/prometheus 노출 포맷으로 바꾸는 역할만 한다. 컴파일 타임에 참조할 타입이
-    // 없어 runtimeOnly다 — 커스텀 메트릭이 쓰는 micrometer-core는 actuator가 이미 끌고 온다
-    // (starter-actuator → starter-micrometer-metrics → micrometer-core, Boot 4.1 기준).
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-    // 분산 추적 — 트레이스의 시작점. 게이트웨이가 traceparent를 만들어 다운스트림으로 넘긴다.
-    // WebFlux라도 별도 배선이 필요 없다(Boot가 Reactor 컨텍스트 전파를 자동 구성).
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
-    // 게이트웨이는 JWT '검증'만 담당(발급은 user-service, 역할 판정은 각 서비스의 @PreAuthorize).
-    // SecurityWebFilterChain + oauth2ResourceServer().jwt() 로 서명·만료를 검증한다.
-    // starter-oauth2-resource-server가 spring-security-oauth2-jose + nimbus-jose-jwt를 전이로 끌어온다.
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
-    // 통합 Swagger UI. WebFlux 게이트웨이라 webmvc-ui가 아니라 webflux-ui를 쓴다.
-    // 각 다운스트림의 /v3/api-docs를 드롭다운으로 모아 보여준다(집계).
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:3.0.3'
 
-    // 토큰 클레임 해석 규칙(클레임명·ROLE_ 접두사·type=access 검증)을 coupon-service와 공유한다.
-    // common은 JPA·서블릿 의존을 노출하지 않아 WebFlux 게이트웨이가 그대로 쓸 수 있다.
     implementation project(':common')
 
-    // Config Server 클라이언트 — application.yml의 spring.config.import=configserver:로 받아온다
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
 

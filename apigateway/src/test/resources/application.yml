@@ -1,11 +1,7 @@
-# 테스트 전용 — 유레카/라우트 대상 없이 시큐리티 체인만 검증한다.
-# 라우트를 두지 않으므로 인증을 통과한 요청은 404가 된다(= 401이 아니면 통과한 것).
 spring:
   application:
     name: apigateway-test
 
-  # 이 파일이 main의 application.yml을 가리므로 configserver: import가 없다.
-  # starter-config는 import가 없으면 기동을 거부하므로(ImportException) 명시적으로 끈다.
   cloud:
     config:
       enabled: false

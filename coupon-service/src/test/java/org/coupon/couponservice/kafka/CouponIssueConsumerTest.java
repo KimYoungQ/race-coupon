@@ -1,11 +1,13 @@
 package org.coupon.couponservice.kafka;
 
 import org.coupon.couponservice.repository.IssuedCouponRepository;
+import org.coupon.couponservice.support.MySqlTestContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
@@ -16,6 +18,7 @@ import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = CouponIssueMessage.TOPIC)
+@Import(MySqlTestContainer.class)
 class CouponIssueConsumerTest {
 
     @Autowired

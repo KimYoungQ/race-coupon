@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,10 +20,7 @@ import java.util.Objects;
 
 @Getter
 @Entity
-@Table(name = "issued_coupon",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_issued_coupon_user_coupon",
-                columnNames = {"user_id", "coupon_id"}))
+@Table(name = "issued_coupon")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IssuedCoupon {
 
@@ -32,20 +28,18 @@ public class IssuedCoupon {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "coupon_id", nullable = false)
+    @Column(name = "coupon_id")
     private Long couponId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private IssuedCouponStatus status;
 
-    @Column(name = "order_id", unique = true)
+    @Column(name = "order_id")
     private Long orderId;
 
-    @Column(nullable = false)
     private LocalDateTime issuedAt;
 
     private LocalDateTime usedAt;

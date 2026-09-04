@@ -1,6 +1,5 @@
 package org.coupon.couponservice.domain;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -23,27 +22,21 @@ public class Coupon {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
     private Long totalQuantity;
 
-    @Column(nullable = false)
     private Long issuedQuantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private DiscountType discountType;
 
-    @Column(nullable = false)
     private Long discountValue;
 
     private Long maxDiscountAmount;
 
     private Long minOrderAmount;
 
-    @Column(nullable = false)
     private LocalDateTime eventEndAt;
 
     @Builder

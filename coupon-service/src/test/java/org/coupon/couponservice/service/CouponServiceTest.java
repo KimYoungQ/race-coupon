@@ -6,11 +6,13 @@ import org.coupon.couponservice.domain.IssuedCoupon;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
+import org.coupon.couponservice.support.MySqlTestContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Import(MySqlTestContainer.class)
 class CouponServiceTest {
 
     private static final long USER_ID = 1L;

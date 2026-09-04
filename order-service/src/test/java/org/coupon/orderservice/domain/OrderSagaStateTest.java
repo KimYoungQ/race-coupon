@@ -46,17 +46,6 @@ class OrderSagaStateTest {
         }
 
         @Test
-        @DisplayName("sagaId가 발급되며 주문마다 다르다")
-        void issues_unique_saga_id() {
-            Order first = order(COUPON_ID);
-            Order second = order(COUPON_ID);
-
-            assertThat(first.getSagaId()).isNotNull();
-            assertThat(second.getSagaId()).isNotNull();
-            assertThat(first.getSagaId()).isNotEqualTo(second.getSagaId());
-        }
-
-        @Test
         @DisplayName("품목은 항상 정확히 하나다")
         void always_exactly_one_item() {
             assertThat(order(COUPON_ID).getItems()).hasSize(1);

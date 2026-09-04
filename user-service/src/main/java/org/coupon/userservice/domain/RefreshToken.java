@@ -1,6 +1,5 @@
 package org.coupon.userservice.domain;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,13 +22,10 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
     private Long userId;
 
-    @Column(nullable = false, length = 512)
     private String token;
 
-    @Column(nullable = false)
     private LocalDateTime expiresAt;
 
     @Builder

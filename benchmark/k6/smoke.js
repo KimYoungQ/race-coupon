@@ -1,4 +1,3 @@
-
 import http from 'k6/http';
 import { check } from 'k6';
 import { authHeaders } from './jwt.js';
@@ -15,14 +14,13 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.01'],     // 실패(5xx/네트워크) 1% 미만
-    http_req_duration: ['p(95)<300'],   // 조회는 가벼우니 여유 있게
+    http_req_failed: ['rate<0.01'],
+    http_req_duration: ['p(95)<300'],
   },
   summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'max'],
 };
 
 export default function () {
-  // 조회도 인증이 필요하다(anyRequest().authenticated()).
   const res = http.get(`${BASE}/api/v1/coupons/${COUPON_ID}`, {
     headers: authHeaders(__VU),
   });

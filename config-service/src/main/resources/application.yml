@@ -10,7 +10,4 @@ spring:
     config:
       server:
         native:
-          # 실행 위치에 둔감하게 둘 다 탐색한다. 저장소 루트에서 실행(IDE 기본)하면 ./config,
-          # 모듈 폴더에서 실행(gradlew bootRun)하면 ../config가 맞는다. 없는 경로는 조용히 무시된다.
-          # 운영에서는 SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS로 절대경로를 준다.
           search-locations: file:./config,file:../config

@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,8 +18,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "stock_reservation",
-        uniqueConstraints = @UniqueConstraint(name = "uk_stock_reservation_order_id", columnNames = "order_id"))
+@Table(name = "stock_reservation")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StockReservation {
 
@@ -28,18 +26,16 @@ public class StockReservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id")
     private Long orderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(nullable = false)
     private Long quantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ReservationStatus status;
 
     @Builder

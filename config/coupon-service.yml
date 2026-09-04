@@ -1,4 +1,3 @@
-# 환경 무관 base. 접속 주소·자격증명·스키마 정책은 coupon-service-{profile}.yml에 있다.
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -18,12 +17,10 @@ spring:
       properties:
         linger.ms: 0
         enable.idempotence: true
-        # 근거는 config/order-service.yml 참조.
         request.timeout.ms: 5000
         delivery.timeout.ms: 45000
         max.block.ms: 3000
         retry.backoff.ms: 200
-    # 발급 메시지를 소비해 IssuedCoupon으로 영속화
     consumer:
       group-id: coupon-issue
       auto-offset-reset: earliest
@@ -34,30 +31,19 @@ spring:
         spring.json.trusted.packages: org.coupon.couponservice.kafka,org.coupon.common.event
         partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
         max.poll.interval.ms: 300000
-    # 이 전역 listener 설정은 선착순 발급 컨슈머(CouponIssueConsumer)의 것이다.
-    # 단건 + 수동 ack라 batch로 바꾸면 그 컨슈머가 깨진다.
-    # Saga 리스너는 전용 sagaListenerContainerFactory(batch + BATCH ack)로 격리한다.
     listener:
       ack-mode: manual
       concurrency: 3
 
-  # Outbox 스케줄러가 발급 핫패스의 스레드를 뺏지 않도록 분리한다.
-  task:
-    scheduling:
-      pool:
-        size: 2
-
   jpa:
-    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: none
 
-  # Validation 메시지
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
   messages:
     basename: messages/validation
     encoding: UTF-8
-
-# 응답 Outbox 발행 재시도 주기. 정상 경로는 커밋 직후 즉시 발행된다.
-# 이것은 주문 Saga 전용이며 선착순 발급 경로에는 Outbox를 넣지 않는다(벤치마크 회귀 방지).
-coupon-service:
-  outbox:
-    fixed-delay: 5000
-    initial-delay: 10000

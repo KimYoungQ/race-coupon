@@ -1,42 +1,27 @@
-# 테스트 전용 설정 — 외부 MySQL/.env 의존 제거(H2 인메모리)
 spring:
   application:
     name: coupon-service-test
 
-  # 이 파일이 main의 application.yml을 가리므로 configserver: import가 없다.
-  # starter-config는 import가 없으면 기동을 거부하므로(ImportException) 명시적으로 끈다.
   cloud:
     config:
       enabled: false
 
-  # H2 인메모리 (MySQL 호환 모드)
-  datasource:
-    url: "jdbc:h2:mem:coupon;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
-
-  # JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
 
-  # data.sql 비활성 — 동시성 테스트는 @BeforeEach에서 직접 시드한다
   sql:
     init:
-      mode: never
+      mode: always
+      encoding: UTF-8
+      data-locations: []
 
-  # Redis — RedisCouponIssueServiceTest / KafkaCouponIssueServiceTest가 사용(로컬 도커 필요)
   data:
     redis:
       host: localhost
       port: 6379
 
-  # Kafka — KafkaCouponIssueServiceTest는 @EmbeddedKafka가 bootstrap을 주입(아래는 그 외 테스트용 기본값)
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -53,22 +38,14 @@ spring:
     listener:
       ack-mode: manual
 
-# 주문 사가 설정 — 발급 경로와 무관하다.
-# 사가 리스너만 끈다. 전역 auto-startup을 쓰면 발급 컨슈머까지 멈춰 CouponIssueConsumerTest가 깨진다.
-# 발행 검증은 타이머를 기다리는 대신 스케줄러를 직접 호출해서 한다.
 coupon-service:
   saga:
     listener:
       auto-startup: false
-  outbox:
-    fixed-delay: 3600000
-    initial-delay: 3600000
 
-# JWT — 운영 키와 무관한 테스트 전용 더미. 값은 있어야 한다(HS256 최소 32바이트).
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes
 
-# Logging
 logging:
   level:
     root: WARN

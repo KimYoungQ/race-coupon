@@ -1,42 +1,35 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
-    // ApiResponse·ErrorCode·BusinessException·GlobalExceptionHandler를 공유받는다.
     implementation project(':common')
 
-    // Config Server 클라이언트 — application.yml의 spring.config.import=configserver:로 받아온다
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    // 메트릭을 /actuator/prometheus 노출 포맷으로 바꾸는 역할만 한다. 컴파일 타임에 참조할 타입이
-    // 없어 runtimeOnly다 — 커스텀 메트릭이 쓰는 micrometer-core는 actuator가 이미 끌고 온다
-    // (starter-actuator → starter-micrometer-metrics → micrometer-core, Boot 4.1 기준).
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-    // 분산 추적 — Micrometer Observation → micrometer-tracing-bridge-otel → OTLP → Jaeger.
-    // 이 스타터 하나가 브리지와 OTLP exporter를 모두 끌고 온다(개별 선언 불필요).
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
-    // 구 coupon-core가 전이로 제공하던 JPA·validation을 이 모듈이 직접 선언한다.
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    // API 문서 — Boot 4.1(Spring 7)은 springdoc 3.x 라인이 호환된다(2.x는 Boot 3.x 전용).
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // MapStruct — Entity↔DTO 변환
     implementation 'org.mapstruct:mapstruct:1.6.3'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
-    // JWT '발급' 주체. Spring Security에는 JWT 생성 기능이 없어 jjwt가 필요하다.
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'

@@ -15,13 +15,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.coupon.orderservice.exception.InvalidOrderStateException;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Entity
@@ -33,34 +30,24 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(nullable = false, unique = true, updatable = false, length = 36)
-    private UUID sagaId;
-
-    @Column(nullable = false)
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private OrderStatus status;
 
     private Long couponId;
 
-    @Column(nullable = false)
     private Long totalAmount;
 
-    @Column(nullable = false)
     private Long discountAmount;
 
-    @Column(nullable = false)
     private Long finalAmount;
 
     private String failureCode;
 
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -68,7 +55,6 @@ public class Order {
 
     @Builder
     private Order(Long userId, Long couponId, Long productId, Integer quantity) {
-        this.sagaId = UUID.randomUUID();
         this.userId = userId;
         this.couponId = couponId;
         this.status = OrderStatus.CREATED;

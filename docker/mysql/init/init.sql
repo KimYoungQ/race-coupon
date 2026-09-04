@@ -8,4 +8,7 @@ GRANT ALL PRIVILEGES ON user_service.*    TO 'cpuser'@'%';
 GRANT ALL PRIVILEGES ON product_service.* TO 'cpuser'@'%';
 GRANT ALL PRIVILEGES ON order_service.*   TO 'cpuser'@'%';
 
+CREATE USER IF NOT EXISTS 'debezium'@'%' IDENTIFIED BY 'dbz';
+GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'debezium'@'%';
+
 FLUSH PRIVILEGES;

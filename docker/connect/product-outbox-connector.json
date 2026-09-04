@@ -1,0 +1,25 @@
+{
+  "name": "product-outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "database.hostname": "mysql",
+    "database.port": "3306",
+    "database.user": "debezium",
+    "database.password": "dbz",
+    "database.connectionTimeZone": "Asia/Seoul",
+    "database.server.id": "102",
+    "topic.prefix": "product-outbox",
+    "database.include.list": "product_service",
+    "table.include.list": "product_service.outbox_event",
+    "snapshot.mode": "no_data",
+    "tombstones.on.delete": "false",
+    "include.schema.changes": "false",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka-1:29092,kafka-2:29092,kafka-3:29092",
+    "schema.history.internal.kafka.topic": "schema-history.product_service",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.fields.additional.placement": "type:header:eventType",
+    "transforms.outbox.route.topic.replacement": "${routedByValue}.response"
+  }
+}

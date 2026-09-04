@@ -1,6 +1,7 @@
 rootProject.name = 'raceCoupon'
 
 include 'common'
+include 'saga-persistence'
 include 'coupon-service'
 include 'user-service'
 include 'product-service'

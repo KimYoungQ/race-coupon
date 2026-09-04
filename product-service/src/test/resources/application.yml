@@ -1,41 +1,26 @@
-# 테스트 전용 설정 — 외부 MySQL/.env 의존 제거(H2 인메모리)
 spring:
   application:
     name: product-service-test
 
-  # 이 파일이 main의 application.yml을 가리므로 configserver: import가 없다.
-  # starter-config는 import가 없으면 기동을 거부하므로(ImportException) 명시적으로 끈다.
   cloud:
     config:
       enabled: false
 
-  # H2 인메모리 (MySQL 호환 모드)
-  datasource:
-    url: "jdbc:h2:mem:product;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
-
-  # JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: false
-    # StockReservation -> Product가 LAZY다. open-in-view가 켜져 있으면 영속성 컨텍스트가
-    # 컨트롤러 응답까지 열려 DB 커넥션을 요청 끝까지 물고 있다. DTO 변환은 서비스 안에서 끝낸다.
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
         default_batch_fetch_size: 100
 
-  # data.sql 비활성 — 테스트는 @BeforeEach에서 직접 시드한다
   sql:
     init:
-      mode: never
+      mode: always
+      encoding: UTF-8
+      data-locations: []
 
-  # Kafka — 실제 브로커 없이도 컨텍스트가 뜨도록 두는 기본값.
-  # 재고 예약 컨슈머 테스트는 @EmbeddedKafka가 bootstrap을 덮어쓴다.
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -51,26 +36,15 @@ spring:
         spring.json.trusted.packages: org.coupon.common.event
     listener:
       ack-mode: manual
-      # 브로커 없이도 컨텍스트가 뜨도록 리스너를 자동 기동하지 않는다.
-      # Saga 테스트는 필요할 때 직접 서비스/스케줄러를 호출하거나 @EmbeddedKafka로 띄운다.
       auto-startup: false
 
-# 백그라운드 타이머를 사실상 꺼둔다. 발행 검증은 스케줄러를 직접 호출해서 한다.
-product-service:
-  outbox:
-    fixed-delay: 3600000
-    initial-delay: 3600000
-
-# Eureka — 테스트에서 레지스트리를 찾지 않는다
 eureka:
   client:
     enabled: false
 
-# JWT — 운영 키와 무관한 테스트 전용 더미. 값은 있어야 한다(HS256 최소 32바이트).
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes
 
-# Logging
 logging:
   level:
     root: WARN

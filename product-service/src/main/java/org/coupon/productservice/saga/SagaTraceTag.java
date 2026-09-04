@@ -12,8 +12,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SagaTraceTag {
 
-    public static final String OUTBOX_WRITE = "outbox.write";
-    public static final String OUTBOX_PUBLISH = "outbox.publish";
     public static final String SAGA_CONSUME = "saga.consume";
 
     private static final String SAGA_ID = "saga.id";

@@ -11,11 +11,13 @@ import org.coupon.couponservice.kafka.CouponIssueMessage;
 import org.coupon.couponservice.repository.CouponIssueRedisRepository;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
+import org.coupon.couponservice.support.MySqlTestContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
@@ -33,6 +35,7 @@ import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = CouponIssueMessage.TOPIC)
+@Import(MySqlTestContainer.class)
 class CouponIssueServiceTest {
 
     private static final long TOTAL_QUANTITY = 100L;

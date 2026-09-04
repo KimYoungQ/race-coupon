@@ -34,8 +34,8 @@ public class OrderController implements OrderControllerApi {
             @Valid @RequestBody OrderCreateRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
         Long userId = user.getUserId();
-        log.info("주문 생성 요청: userId={}, productId={}, quantity={}",
-                userId, request.productId(), request.quantity());
+        log.info("주문 생성 요청: userId={}, productId={}, quantity={}, couponId={}",
+                userId, request.productId(), request.quantity(), request.couponId());
         OrderCreateResponse response = orderService.create(userId, request);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));

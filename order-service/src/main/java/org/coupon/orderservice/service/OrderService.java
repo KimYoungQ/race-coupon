@@ -2,8 +2,6 @@ package org.coupon.orderservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.coupon.common.event.StockOrderStatus;
-import org.coupon.common.outbox.SagaStatus;
 import org.coupon.orderservice.domain.Order;
 import org.coupon.orderservice.dto.OrderCreateRequest;
 import org.coupon.orderservice.dto.OrderCreateResponse;
@@ -11,7 +9,11 @@ import org.coupon.orderservice.dto.OrderResponse;
 import org.coupon.orderservice.exception.OrderNotFoundException;
 import org.coupon.orderservice.mapper.OrderMapper;
 import org.coupon.orderservice.repository.OrderRepository;
-import org.coupon.orderservice.service.outbox.ProductOutboxHelper;
+import org.coupon.orderservice.saga.AbstractOrderSaga;
+import org.coupon.orderservice.saga.OrderPlacementSaga;
+import org.coupon.orderservice.saga.OrderSagaPayload;
+import org.coupon.orderservice.saga.StockOnlyOrderSaga;
+import org.coupon.orderservice.saga.framework.SagaManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
-    private final ProductOutboxHelper productOutboxHelper;
+    private final SagaManager sagaManager;
 
     @Transactional
     public OrderCreateResponse create(Long userId, OrderCreateRequest request) {
@@ -36,10 +38,14 @@ public class OrderService {
                 .build();
 
         Order saved = orderRepository.save(order);
-        productOutboxHelper.saveProductOutboxMessage(saved, StockOrderStatus.PENDING, SagaStatus.STARTED);
+        OrderSagaPayload payload = OrderSagaPayload.of(saved);
+        AbstractOrderSaga saga = saved.getCouponId() == null
+                ? sagaManager.begin(saved.getId(), StockOnlyOrderSaga.class, payload, StockOnlyOrderSaga::new)
+                : sagaManager.begin(saved.getId(), OrderPlacementSaga.class, payload, OrderPlacementSaga::new);
 
-        log.info("주문 접수: orderId={}, sagaId={}, userId={}, productId={}, quantity={}",
-                saved.getId(), saved.getSagaId(), userId, request.productId(), request.quantity());
+        log.info("주문 접수: orderId={}, sagaId={}, sagaType={}, userId={}, productId={}, quantity={}, couponId={}",
+                saved.getId(), saga.getId(), saga.getType(), userId, request.productId(), request.quantity(),
+                request.couponId());
         return orderMapper.toCreateResponse(saved);
     }
 

@@ -2,36 +2,28 @@ spring:
   cloud:
     gateway:
       server:
-        webflux:            # Boot 4.1 / Spring Cloud Gateway의 WebFlux 서버 네임스페이스
+        webflux:
           routes:
-            # ===== 쿠폰 서비스 =====
             - id: coupon-service
-              uri: lb://coupon-service        # lb:// = Eureka로 인스턴스를 찾아 로드밸런싱
+              uri: lb://coupon-service
               predicates:
                 - Path=/api/v1/coupons/**
-              # StripPrefix 없음: 다운스트림도 같은 /api/v1 경로를 기대한다.
 
-            # ===== 사용자 서비스 =====
             - id: user-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/auth/**,/api/v1/users/**
 
-            # ===== 상품 서비스 =====
             - id: product-service
               uri: lb://product-service
               predicates:
                 - Path=/api/v1/products/**
 
-            # ===== 주문 서비스 =====
             - id: order-service
               uri: lb://order-service
               predicates:
                 - Path=/api/v1/orders/**
 
-            # ===== Swagger 문서 집계 =====
-            # /v3/api-docs/{service} 를 각 서비스의 /v3/api-docs 로 프록시한다.
-            # /v3/api-docs/** 는 SecurityConfig에서 이미 열려 있어 별도 permitAll이 필요 없다.
             - id: coupon-service-docs
               uri: lb://coupon-service
               predicates:
@@ -60,7 +52,6 @@ spring:
               filters:
                 - RewritePath=/v3/api-docs/order-service,/v3/api-docs
 
-# 통합 Swagger UI: http://localhost:8080/swagger-ui.html 에서 드롭다운으로 서비스 문서 전환
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

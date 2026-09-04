@@ -1,9 +1,16 @@
-# 환경 무관 base. 접속 주소·자격증명·스키마 정책은 user-service-{profile}.yml에 있다.
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-# JWT 유효시간(초): Access 30분, Refresh 7일. secret은 config/application-{profile}.yml 공통.
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
 jwt:
   access-token-validity: 1800
   refresh-token-validity: 604800
