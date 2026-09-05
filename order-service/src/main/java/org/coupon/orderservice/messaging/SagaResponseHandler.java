@@ -48,7 +48,7 @@ public class SagaResponseHandler {
         AbstractOrderSaga saga = findSaga(UUID.fromString(sagaId));
 
         if (!saga.isAwaiting(STOCK_RESERVATION)) {
-            log.info("지연/무효 재고 응답 무시: sagaStockSagaServiceId={}, sagaStatus={}, stepStatus={}, result={}",
+            log.info("지연/무효 재고 응답 무시: sagaId={}, sagaStatus={}, stepStatus={}, result={}",
                     sagaId, saga.getStatus(), saga.getStepStatus(), response.result());
             messageLog.markProcessed(eventId);
             return;

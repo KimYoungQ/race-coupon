@@ -5,9 +5,10 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
+import org.coupon.common.security.JwtSecretProperties;
+import org.coupon.common.security.JwtTokenContract;
 import org.coupon.userservice.domain.UserRole;
 import org.coupon.userservice.exception.ExpiredTokenException;
 import org.coupon.userservice.exception.InvalidTokenException;
@@ -15,18 +16,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Slf4j
 @Component
 public class JwtTokenProvider {
 
-    private static final String CLAIM_USERNAME = "username";
-    private static final String CLAIM_ROLE = "role";
-    private static final String CLAIM_TYPE = "type";
-    private static final String TYPE_ACCESS = "access";
-    private static final String TYPE_REFRESH = "refresh";
     private static final long MILLIS_PER_SECOND = 1000L;
 
     private final SecretKey key;
@@ -34,14 +29,10 @@ public class JwtTokenProvider {
     private final long accessTokenValidityMillis;
     private final long refreshTokenValidityMillis;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret,
+    public JwtTokenProvider(JwtSecretProperties jwtProperties,
                             @Value("${jwt.access-token-validity}") long accessTokenValidity,
                             @Value("${jwt.refresh-token-validity}") long refreshTokenValidity) {
-        if (secret == null || secret.isBlank() || secret.startsWith("${")) {
-            throw new IllegalStateException(
-                    "jwt.secret이 설정되지 않았습니다. config/application-{profile}.yml에 지정하세요.");
-        }
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.key = jwtProperties.toSecretKey();
         this.accessTokenValiditySeconds = accessTokenValidity;
         this.accessTokenValidityMillis = accessTokenValidity * MILLIS_PER_SECOND;
         this.refreshTokenValidityMillis = refreshTokenValidity * MILLIS_PER_SECOND;
@@ -51,9 +42,9 @@ public class JwtTokenProvider {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim(CLAIM_USERNAME, username)
-                .claim(CLAIM_ROLE, role.name())
-                .claim(CLAIM_TYPE, TYPE_ACCESS)
+                .claim(JwtTokenContract.CLAIM_USERNAME, username)
+                .claim(JwtTokenContract.CLAIM_ROLE, role.name())
+                .claim(JwtTokenContract.CLAIM_TYPE, JwtTokenContract.TYPE_ACCESS)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + accessTokenValidityMillis))
                 .signWith(key, Jwts.SIG.HS256)
@@ -64,7 +55,7 @@ public class JwtTokenProvider {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim(CLAIM_TYPE, TYPE_REFRESH)
+                .claim(JwtTokenContract.CLAIM_TYPE, JwtTokenContract.TYPE_REFRESH)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenValidityMillis))
                 .signWith(key, Jwts.SIG.HS256)
@@ -82,11 +73,11 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        return parseClaims(token).get(CLAIM_USERNAME, String.class);
+        return parseClaims(token).get(JwtTokenContract.CLAIM_USERNAME, String.class);
     }
 
     public String getRoleFromToken(String token) {
-        return parseClaims(token).get(CLAIM_ROLE, String.class);
+        return parseClaims(token).get(JwtTokenContract.CLAIM_ROLE, String.class);
     }
 
     public boolean validateToken(String token) {
@@ -95,11 +86,13 @@ public class JwtTokenProvider {
     }
 
     public boolean isRefreshToken(String token) {
-        return TYPE_REFRESH.equals(parseClaims(token).get(CLAIM_TYPE, String.class));
+        return JwtTokenContract.TYPE_REFRESH
+                .equals(parseClaims(token).get(JwtTokenContract.CLAIM_TYPE, String.class));
     }
 
     public boolean isAccessToken(String token) {
-        return TYPE_ACCESS.equals(parseClaims(token).get(CLAIM_TYPE, String.class));
+        return JwtTokenContract.TYPE_ACCESS
+                .equals(parseClaims(token).get(JwtTokenContract.CLAIM_TYPE, String.class));
     }
 
     public Date getExpirationFromToken(String token) {

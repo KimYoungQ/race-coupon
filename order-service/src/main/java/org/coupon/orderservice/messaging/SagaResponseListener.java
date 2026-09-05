@@ -3,7 +3,7 @@ package org.coupon.orderservice.messaging;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.orderservice.exception.InvalidOrderStateException;
-import org.coupon.orderservice.saga.SagaTraceTag;
+import org.coupon.sagapersistence.tracing.SagaTraceTag;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;

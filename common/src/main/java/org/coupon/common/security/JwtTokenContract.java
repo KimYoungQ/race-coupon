@@ -10,6 +10,8 @@ public final class JwtTokenContract {
 
     public static final String TYPE_ACCESS = "access";
 
+    public static final String TYPE_REFRESH = "refresh";
+
     public static final String ROLE_PREFIX = "ROLE_";
 
     private JwtTokenContract() {

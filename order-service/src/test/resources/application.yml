@@ -34,8 +34,10 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: org.coupon.common.event
-    listener:
-      auto-startup: false
+
+saga:
+  listener:
+    auto-startup: false
 
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes

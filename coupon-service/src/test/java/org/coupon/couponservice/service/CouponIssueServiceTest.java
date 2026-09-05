@@ -4,7 +4,7 @@ import org.coupon.common.exception.BusinessException;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
-import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.exception.CouponAlreadyIssuedException;
 import org.coupon.couponservice.exception.CouponEventEndedException;
 import org.coupon.couponservice.kafka.CouponIssueMessage;
@@ -101,7 +101,7 @@ class CouponIssueServiceTest {
             assertThat(findCoupon().getIssuedQuantity()).isEqualTo(TOTAL_QUANTITY);
         });
 
-        CouponIssueResponse stock = couponIssueService.getCouponInfo(couponId);
+        CouponStockResponse stock = couponIssueService.getCouponInfo(couponId);
         assertThat(stock.couponId()).isEqualTo(couponId);
         assertThat(stock.issuedQuantity()).isEqualTo(TOTAL_QUANTITY);
         assertThat(stock.remaining()).isZero();

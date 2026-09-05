@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
-import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.security.AuthenticatedUser;
@@ -50,7 +50,7 @@ public class CouponIssueController implements CouponIssueControllerApi {
     }
 
     @GetMapping("/{couponId}")
-    public ResponseEntity<ApiResponse<CouponIssueResponse>> getCoupon(@PathVariable Long couponId) {
+    public ResponseEntity<ApiResponse<CouponStockResponse>> getCoupon(@PathVariable Long couponId) {
         return ResponseEntity.ok(ApiResponse.success(couponIssueService.getCouponInfo(couponId)));
     }
 }

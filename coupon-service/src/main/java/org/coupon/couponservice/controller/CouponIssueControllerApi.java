@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
-import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.springframework.http.ResponseEntity;
@@ -88,7 +88,7 @@ public interface CouponIssueControllerApi {
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                             {"success":false,"data":null,"errorCode":"COUPON_NOT_FOUND","errorMessage":"쿠폰을 찾을 수 없습니다"}""")))
     })
-    ResponseEntity<ApiResponse<CouponIssueResponse>> getCoupon(
+    ResponseEntity<ApiResponse<CouponStockResponse>> getCoupon(
             @Parameter(in = ParameterIn.PATH, description = "조회할 쿠폰 ID", required = true, example = "1")
             Long couponId);
 }

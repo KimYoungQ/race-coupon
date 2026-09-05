@@ -1,4 +1,4 @@
-package org.coupon.productservice.saga;
+package org.coupon.sagapersistence.tracing;
 
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;

@@ -6,7 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.coupon.userservice.exception.ExpiredTokenException;
+import org.coupon.common.exception.BusinessException;
+import org.coupon.common.security.JwtTokenContract;
 import org.coupon.userservice.exception.InvalidTokenException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,9 +30,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTH_PATH_PREFIX = "/api/v1/auth/";
-    private static final String ROLE_PREFIX = "ROLE_";
     private static final String USER_ID_ATTRIBUTE = "userId";
-    private static final String EXCEPTION_ATTRIBUTE = "exception";
+    static final String EXCEPTION_ATTRIBUTE = "exception";
 
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -51,7 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token)) {
             try {
                 authenticate(request, token);
-            } catch (ExpiredTokenException | InvalidTokenException e) {
+            } catch (BusinessException e) {
+                log.debug("토큰 인증 실패: errorCode={}", e.getErrorCode().getCode());
                 request.setAttribute(EXCEPTION_ATTRIBUTE, e);
             }
         }
@@ -73,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserDetails userDetails = User.builder()
                 .username(username)
                 .password("")
-                .authorities(List.of(new SimpleGrantedAuthority(ROLE_PREFIX + role)))
+                .authorities(List.of(new SimpleGrantedAuthority(JwtTokenContract.ROLE_PREFIX + role)))
                 .build();
 
         UsernamePasswordAuthenticationToken authentication =

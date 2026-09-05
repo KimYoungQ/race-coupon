@@ -1,7 +1,7 @@
 package org.coupon.couponservice.mapper;
 
 import org.coupon.couponservice.domain.Coupon;
-import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.dto.CouponResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
 import org.mapstruct.Mapper;
@@ -16,7 +16,7 @@ public interface CouponMapper {
     @Mapping(target = "couponId", source = "coupon.id")
     @Mapping(target = "issuedQuantity", source = "issued")
     @Mapping(target = "remaining", expression = "java(coupon.getTotalQuantity() - issued)")
-    CouponIssueResponse toIssueResponse(Coupon coupon, long issued);
+    CouponStockResponse toStockResponse(Coupon coupon, long issued);
 
     @Mapping(target = "couponId", source = "id")
     CouponResponse toResponse(Coupon coupon);

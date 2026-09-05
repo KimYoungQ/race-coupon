@@ -62,10 +62,6 @@ public class Coupon {
         return Math.max(0, price - discount);
     }
 
-    public long discountFor(long price) {
-        return price - finalPrice(price);
-    }
-
     public boolean satisfiesMinOrderAmount(long price) {
         return minOrderAmount == null || price >= minOrderAmount;
     }

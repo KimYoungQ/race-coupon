@@ -2,7 +2,7 @@ package org.coupon.productservice.messaging;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.coupon.productservice.saga.SagaTraceTag;
+import org.coupon.sagapersistence.tracing.SagaTraceTag;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;

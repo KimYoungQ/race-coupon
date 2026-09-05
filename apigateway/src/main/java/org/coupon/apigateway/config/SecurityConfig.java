@@ -48,13 +48,6 @@ public class SecurityConfig {
     @Bean
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.mode(Mode.DENY))
-                        .contentTypeOptions(Customizer.withDefaults())
-                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.SAME_ORIGIN))
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; frame-ancestors 'none'; base-uri 'self'")))
-
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)

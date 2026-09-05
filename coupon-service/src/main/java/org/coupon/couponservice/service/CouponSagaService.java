@@ -56,13 +56,14 @@ public class CouponSagaService {
         try {
             issued.use(request.orderId(), request.userId());
         } catch (BusinessException e) {
-            log.info("쿠폰 사용이 도메인 가드에 막혔다: orderId={}, issuedCouponId={}, code={}",
+            log.info("쿠폰 적용 실패: orderId={}, issuedCouponId={}, code={}",
                     request.orderId(), issued.getId(), e.getErrorCode().getCode());
             return rejected(request, e.getErrorCode());
         }
 
-        long discountAmount = coupon.discountFor(request.orderAmount());
-        long finalAmount = coupon.finalPrice(request.orderAmount());
+        long orderAmount = request.orderAmount();
+        long finalAmount = coupon.finalPrice(orderAmount);
+        long discountAmount = orderAmount - finalAmount;
 
         log.info("쿠폰 적용: orderId={}, issuedCouponId={}, 할인={}, 최종={}",
                 request.orderId(), issued.getId(), discountAmount, finalAmount);
@@ -82,7 +83,7 @@ public class CouponSagaService {
         } else if (issued.restore(request.orderId())) {
             log.info("쿠폰 복구: orderId={}, issuedCouponId={}", request.orderId(), issued.getId());
         } else {
-            log.info("이 주문이 사용한 쿠폰이 아니라 복구를 건너뛴다: orderId={}, issuedCouponId={}, status={}",
+            log.info("쿠폰 복구 생략, 사용 상태가 아니거나 주문 ID가 일치하지 않음: orderId={}, issuedCouponId={}, status={}",
                     request.orderId(), issued.getId(), issued.getStatus());
         }
 

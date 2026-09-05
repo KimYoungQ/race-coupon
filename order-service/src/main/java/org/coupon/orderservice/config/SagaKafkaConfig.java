@@ -18,10 +18,10 @@ import java.util.Map;
 @Configuration
 public class SagaKafkaConfig {
 
-    @Value("${spring.kafka.listener.concurrency:3}")
+    @Value("${saga.listener.concurrency:3}")
     private int concurrency;
 
-    @Value("${spring.kafka.listener.auto-startup:true}")
+    @Value("${saga.listener.auto-startup:true}")
     private boolean autoStartup;
 
     @Bean

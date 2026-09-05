@@ -38,10 +38,9 @@ spring:
     listener:
       ack-mode: manual
 
-coupon-service:
-  saga:
-    listener:
-      auto-startup: false
+saga:
+  listener:
+    auto-startup: false
 
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes

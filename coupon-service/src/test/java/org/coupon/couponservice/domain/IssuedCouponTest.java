@@ -114,16 +114,4 @@ class IssuedCouponTest {
             assertThat(coupon.getOrderId()).isEqualTo(ORDER_ID);
         }
     }
-
-    @Test
-    @DisplayName("isUsedBy는 그 주문이 실제로 사용한 경우에만 참이다")
-    void is_used_by() {
-        IssuedCoupon coupon = issued();
-        assertThat(coupon.isUsedBy(ORDER_ID)).isFalse();
-
-        coupon.use(ORDER_ID, USER_ID);
-
-        assertThat(coupon.isUsedBy(ORDER_ID)).isTrue();
-        assertThat(coupon.isUsedBy(ORDER_ID + 1)).isFalse();
-    }
 }

@@ -73,8 +73,4 @@ public class IssuedCoupon {
         this.usedAt = null;
         return true;
     }
-
-    public boolean isUsedBy(Long orderId) {
-        return status == IssuedCouponStatus.USED && Objects.equals(this.orderId, orderId);
-    }
 }

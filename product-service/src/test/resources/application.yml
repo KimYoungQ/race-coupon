@@ -36,7 +36,10 @@ spring:
         spring.json.trusted.packages: org.coupon.common.event
     listener:
       ack-mode: manual
-      auto-startup: false
+
+saga:
+  listener:
+    auto-startup: false
 
 eureka:
   client:

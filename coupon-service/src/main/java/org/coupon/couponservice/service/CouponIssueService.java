@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.IssuedCoupon;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
-import org.coupon.couponservice.dto.CouponIssueResponse;
+import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.exception.CouponAlreadyIssuedException;
 import org.coupon.couponservice.exception.CouponEventEndedException;
 import org.coupon.couponservice.exception.CouponNotFoundException;
@@ -83,11 +83,11 @@ public class CouponIssueService {
     }
 
     @Transactional(readOnly = true)
-    public CouponIssueResponse getCouponInfo(Long couponId) {
+    public CouponStockResponse getCouponInfo(Long couponId) {
         Coupon coupon = getCoupon(couponId);
         long issued = issuedCouponRepository.countByCouponId(couponId);
 
-        return couponMapper.toIssueResponse(coupon, issued);
+        return couponMapper.toStockResponse(coupon, issued);
     }
 
     private CouponIssueAcceptedResponse reissueOrReject(Long couponId, Long userId) {

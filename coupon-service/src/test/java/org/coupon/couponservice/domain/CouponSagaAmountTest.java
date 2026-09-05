@@ -29,26 +29,16 @@ class CouponSagaAmountTest {
     }
 
     @Nested
-    @DisplayName("discountFor")
-    class DiscountFor {
+    @DisplayName("finalPrice")
+    class FinalPrice {
 
         @Test
-        @DisplayName("할인액과 최종가를 더하면 항상 원가가 된다")
-        void is_consistent_with_final_price() {
-            Coupon coupon = percent(10L, null, null);
-            long price = 100_000L;
-
-            assertThat(coupon.discountFor(price) + coupon.finalPrice(price)).isEqualTo(price);
-        }
-
-        @Test
-        @DisplayName("원가를 넘는 정액 쿠폰이어도 할인액이 원가를 넘지 않는다")
-        void never_exceeds_price() {
+        @DisplayName("원가를 넘는 정액 쿠폰이어도 최종가가 0 밑으로 내려가지 않는다")
+        void never_goes_below_zero() {
             Coupon coupon = fixedAmount(5_000L);
             long price = 1_000L;
 
             assertThat(DiscountPolicyFactory.create(coupon).discount(price)).isEqualTo(5_000L);
-            assertThat(coupon.discountFor(price)).isEqualTo(1_000L);
             assertThat(coupon.finalPrice(price)).isZero();
         }
 
@@ -58,7 +48,6 @@ class CouponSagaAmountTest {
             Coupon coupon = percent(20L, 30_000L, null);
             long price = 200_000L;
 
-            assertThat(coupon.discountFor(price)).isEqualTo(30_000L);
             assertThat(coupon.finalPrice(price)).isEqualTo(170_000L);
         }
     }
@@ -88,7 +77,6 @@ class CouponSagaAmountTest {
             Coupon coupon = percent(10L, null, 50_000L);
             long price = 10_000L;
 
-            assertThat(coupon.discountFor(price)).isZero();
             assertThat(coupon.finalPrice(price)).isEqualTo(price);
             assertThat(coupon.satisfiesMinOrderAmount(price)).isFalse();
         }
