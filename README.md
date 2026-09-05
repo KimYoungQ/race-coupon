@@ -6,6 +6,9 @@
 <br>
 <br>
  자세한 내용은 [WIKI](https://github.com/KimYoungQ/race-coupon/wiki) 통해 참고하실 수 있습니다.
+<br>
+<br>
+<img width="592" height="716" alt="아키텍처그림_v2" src="https://github.com/user-attachments/assets/8792a02b-6e60-432d-bbf9-7daaab6d4262" />
 
 
 
