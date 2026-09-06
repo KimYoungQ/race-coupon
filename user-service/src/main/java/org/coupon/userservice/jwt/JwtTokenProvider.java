@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -41,6 +42,7 @@ public class JwtTokenProvider {
     public String generateAccessToken(Long userId, String username, UserRole role) {
         Date now = new Date();
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(String.valueOf(userId))
                 .claim(JwtTokenContract.CLAIM_USERNAME, username)
                 .claim(JwtTokenContract.CLAIM_ROLE, role.name())
@@ -54,6 +56,7 @@ public class JwtTokenProvider {
     public String generateRefreshToken(Long userId) {
         Date now = new Date();
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(String.valueOf(userId))
                 .claim(JwtTokenContract.CLAIM_TYPE, JwtTokenContract.TYPE_REFRESH)
                 .issuedAt(now)
@@ -101,6 +104,10 @@ public class JwtTokenProvider {
 
     public long getAccessTokenValiditySeconds() {
         return accessTokenValiditySeconds;
+    }
+
+    public long getRefreshTokenValidityMillis() {
+        return refreshTokenValidityMillis;
     }
 
     private Claims parseClaims(String token) {

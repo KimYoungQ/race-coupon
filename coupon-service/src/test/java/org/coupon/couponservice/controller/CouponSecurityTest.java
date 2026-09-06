@@ -3,6 +3,7 @@ package org.coupon.couponservice.controller;
 import io.jsonwebtoken.Jwts;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
+import org.coupon.couponservice.jwt.TokenBlacklistService;
 import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
 import org.coupon.couponservice.support.MySqlTestContainer;
@@ -15,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -24,6 +26,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -47,6 +50,9 @@ class CouponSecurityTest {
 
     @Value("${jwt.secret}")
     private String secret;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
 
     private MockMvc mockMvc;
     private Long couponId;
@@ -109,6 +115,18 @@ class CouponSecurityTest {
 
         mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + refresh))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("로그아웃(블랙리스트)된 토큰으로 발급하면 401이다")
+    void issue_with_blacklisted_token_is_unauthorized() throws Exception {
+        String loggedOut = token(1L, "USER", "access", HOUR_MILLIS);
+        given(tokenBlacklistService.isBlacklisted(loggedOut)).willReturn(true);
+
+        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + loggedOut))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("INVALID_TOKEN"));
     }

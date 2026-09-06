@@ -2,7 +2,6 @@ package org.coupon.userservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.coupon.userservice.domain.RefreshToken;
 import org.coupon.userservice.domain.User;
 import org.coupon.userservice.domain.UserRole;
 import org.coupon.userservice.dto.request.LoginRequest;
@@ -17,8 +16,9 @@ import org.coupon.userservice.exception.InvalidCredentialsException;
 import org.coupon.userservice.exception.InvalidTokenException;
 import org.coupon.userservice.exception.UserNotFoundException;
 import org.coupon.userservice.jwt.JwtTokenProvider;
+import org.coupon.userservice.jwt.TokenBlacklistService;
 import org.coupon.userservice.mapper.UserMapper;
-import org.coupon.userservice.repository.RefreshTokenRepository;
+import org.coupon.userservice.repository.RefreshTokenRedisRepository;
 import org.coupon.userservice.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,8 +27,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 
 @Slf4j
@@ -37,7 +35,8 @@ import java.util.Date;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRedisRepository refreshTokenRedisRepository;
+    private final TokenBlacklistService tokenBlacklistService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
@@ -66,7 +65,7 @@ public class AuthService {
         return userMapper.toSignupResponse(saved);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         log.info("로그인 요청: username={}", request.getUsername());
 
@@ -77,7 +76,7 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
-        saveOrRotateRefreshToken(user.getId(), refreshToken);
+        refreshTokenRedisRepository.save(user.getId(), refreshToken, jwtTokenProvider.getRefreshTokenValidityMillis());
 
         log.info("로그인 완료: userId={}", user.getId());
         return userMapper.toLoginResponse(
@@ -87,7 +86,7 @@ public class AuthService {
                 jwtTokenProvider.getAccessTokenValiditySeconds());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public TokenResponse refresh(TokenRefreshRequest request) {
         String refreshToken = request.getRefreshToken();
         jwtTokenProvider.validateToken(refreshToken);
@@ -95,9 +94,6 @@ public class AuthService {
         if (!jwtTokenProvider.isRefreshToken(refreshToken)) {
             throw new InvalidTokenException("리프레시 토큰이 아닙니다");
         }
-
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new InvalidTokenException("폐기된 토큰입니다"));
 
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
@@ -107,10 +103,28 @@ public class AuthService {
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
-        stored.rotate(newRefreshToken, expiresAtOf(newRefreshToken));
+
+        boolean rotated = refreshTokenRedisRepository.rotate(
+                userId,
+                refreshToken,
+                newRefreshToken,
+                jwtTokenProvider.getRefreshTokenValidityMillis());
+        if (!rotated) {
+            throw new InvalidTokenException("폐기된 토큰입니다");
+        }
 
         log.info("토큰 재발급 완료: userId={}", userId);
         return TokenResponse.of(newAccessToken, newRefreshToken, jwtTokenProvider.getAccessTokenValiditySeconds());
+    }
+
+    public void logout(String accessToken) {
+        Long userId = jwtTokenProvider.getUserIdFromToken(accessToken);
+        Date expiry = jwtTokenProvider.getExpirationFromToken(accessToken);
+
+        refreshTokenRedisRepository.deleteByUserId(userId);
+        tokenBlacklistService.addToBlacklist(accessToken, expiry);
+
+        log.info("로그아웃 완료: userId={}", userId);
     }
 
     private void authenticate(String username, String rawPassword) {
@@ -120,22 +134,5 @@ public class AuthService {
             log.warn("로그인 실패: username={}", username);
             throw new InvalidCredentialsException();
         }
-    }
-
-    private void saveOrRotateRefreshToken(Long userId, String newToken) {
-        LocalDateTime expiresAt = expiresAtOf(newToken);
-        refreshTokenRepository.findByUserId(userId)
-                .ifPresentOrElse(
-                        stored -> stored.rotate(newToken, expiresAt),
-                        () -> refreshTokenRepository.save(RefreshToken.builder()
-                                .userId(userId)
-                                .token(newToken)
-                                .expiresAt(expiresAt)
-                                .build()));
-    }
-
-    private LocalDateTime expiresAtOf(String token) {
-        Date expiration = jwtTokenProvider.getExpirationFromToken(token);
-        return expiration.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 }

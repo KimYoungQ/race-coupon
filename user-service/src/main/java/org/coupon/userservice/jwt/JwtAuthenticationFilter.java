@@ -29,15 +29,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final String AUTH_PATH_PREFIX = "/api/v1/auth/";
-    private static final String USER_ID_ATTRIBUTE = "userId";
+    private static final List<String> PUBLIC_AUTH_PATHS = List.of(
+            "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh");
     static final String EXCEPTION_ATTRIBUTE = "exception";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().startsWith(AUTH_PATH_PREFIX);
+        return PUBLIC_AUTH_PATHS.contains(request.getRequestURI());
     }
 
     @Override
@@ -67,6 +68,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throw new InvalidTokenException("Access Token이 아닙니다");
         }
 
+        if (tokenBlacklistService.isBlacklisted(token)) {
+            throw new InvalidTokenException("로그아웃된 토큰입니다");
+        }
+
         Long userId = jwtTokenProvider.getUserIdFromToken(token);
         String username = jwtTokenProvider.getUsernameFromToken(token);
         String role = jwtTokenProvider.getRoleFromToken(token);
@@ -82,8 +87,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        request.setAttribute(USER_ID_ATTRIBUTE, userId);
 
         log.debug("인증 성공: userId={}, role={}", userId, role);
     }

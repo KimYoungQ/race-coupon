@@ -30,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     static final String EXCEPTION_ATTRIBUTE = "exception";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -67,6 +68,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (!jwtTokenProvider.isAccessToken(token)) {
             throw new BusinessException(ErrorCode.INVALID_TOKEN, "Access Token이 아닙니다");
+        }
+
+        if (tokenBlacklistService.isBlacklisted(token)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN, "로그아웃된 토큰입니다");
         }
 
         AuthenticatedUser principal = AuthenticatedUser.from(
