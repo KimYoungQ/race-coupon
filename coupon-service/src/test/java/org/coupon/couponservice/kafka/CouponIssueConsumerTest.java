@@ -1,65 +1,90 @@
 package org.coupon.couponservice.kafka;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.coupon.couponservice.domain.Coupon;
+import org.coupon.couponservice.domain.DiscountType;
+import org.coupon.couponservice.repository.CouponRepository;
 import org.coupon.couponservice.repository.IssuedCouponRepository;
 import org.coupon.couponservice.support.MySqlTestContainer;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.support.Acknowledgment;
 
-import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
-@SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-@EmbeddedKafka(partitions = 1, topics = CouponIssueMessage.TOPIC)
+@SpringBootTest
 @Import(MySqlTestContainer.class)
 class CouponIssueConsumerTest {
 
+    private static final long USER_ID = 42L;
+
     @Autowired
-    private KafkaTemplate<String, CouponIssueMessage> kafkaTemplate;
+    private CouponIssueConsumer couponIssueConsumer;
+
+    @Autowired
+    private CouponRepository couponRepository;
 
     @Autowired
     private IssuedCouponRepository issuedCouponRepository;
 
-    @BeforeEach
-    void setUp() {
+    @AfterEach
+    void tearDown() {
         issuedCouponRepository.deleteAllInBatch();
+        couponRepository.deleteAllInBatch();
     }
 
     @Test
-    @DisplayName("토픽에 올라온 발급 메시지를 소비해 IssuedCoupon으로 저장한다")
-    void consume_and_persist() {
-        long couponId = 999_999L;
-        long userId = 42L;
+    @DisplayName("발급 메시지를 받으면 IssuedCoupon 이 저장되고 발급 수량이 늘어난다")
+    void consumeSavesIssuedCoupon() {
+        // given
+        Long couponId = saveCoupon();
 
-        kafkaTemplate.send(CouponIssueMessage.TOPIC, String.valueOf(userId), new CouponIssueMessage(couponId, userId));
+        // when
+        couponIssueConsumer.consume(record(couponId), noAck());
 
-        await().atMost(Duration.ofSeconds(10))
-                .untilAsserted(() ->
-                        assertThat(issuedCouponRepository.countByCouponId(couponId)).isEqualTo(1L));
+        // then
+        assertThat(issuedCouponRepository.countByCouponId(couponId)).isEqualTo(1L);
+        assertThat(couponRepository.findById(couponId).orElseThrow().getIssuedQuantity()).isEqualTo(1L);
     }
 
     @Test
-    @DisplayName("같은 발급 메시지를 두 번 받아도 IssuedCoupon은 한 건만 남는다")
-    void duplicate_message_is_idempotent() {
-        long couponId = 999_998L;
-        long userId = 43L;
-        CouponIssueMessage message = new CouponIssueMessage(couponId, userId);
+    @DisplayName("같은 발급 메시지를 두 번 받아도 IssuedCoupon 은 한 건만 남는다")
+    void duplicateMessageLeavesOneIssuedCoupon() {
+        // given
+        Long couponId = saveCoupon();
+        couponIssueConsumer.consume(record(couponId), noAck());
 
-        kafkaTemplate.send(CouponIssueMessage.TOPIC, String.valueOf(userId), message);
-        kafkaTemplate.send(CouponIssueMessage.TOPIC, String.valueOf(userId), message);
+        // when
+        couponIssueConsumer.consume(record(couponId), noAck());
 
-        await().atMost(Duration.ofSeconds(10))
-                .untilAsserted(() ->
-                        assertThat(issuedCouponRepository.countByCouponId(couponId)).isEqualTo(1L));
-        await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(10))
-                .untilAsserted(() ->
-                        assertThat(issuedCouponRepository.countByCouponId(couponId)).isEqualTo(1L));
+        // then
+        assertThat(issuedCouponRepository.countByCouponId(couponId)).isEqualTo(1L);
+        assertThat(couponRepository.findById(couponId).orElseThrow().getIssuedQuantity()).isEqualTo(1L);
+    }
+
+    private Long saveCoupon() {
+        return couponRepository.save(Coupon.builder()
+                .title("선착순 쿠폰")
+                .totalQuantity(100L)
+                .discountType(DiscountType.PERCENT)
+                .discountValue(10L)
+                .eventEndAt(LocalDateTime.now().plusDays(1))
+                .build()).getId();
+    }
+
+    private ConsumerRecord<String, CouponIssueMessage> record(Long couponId) {
+        return new ConsumerRecord<>(CouponIssueMessage.TOPIC, 0, 0L,
+                String.valueOf(USER_ID), new CouponIssueMessage(couponId, USER_ID));
+    }
+
+    private Acknowledgment noAck() {
+        return () -> {
+        };
     }
 }

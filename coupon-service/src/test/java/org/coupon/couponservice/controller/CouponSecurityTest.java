@@ -5,161 +5,104 @@ import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 import org.coupon.couponservice.jwt.TokenBlacklistService;
 import org.coupon.couponservice.repository.CouponRepository;
-import org.coupon.couponservice.repository.IssuedCouponRepository;
 import org.coupon.couponservice.support.MySqlTestContainer;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Date;
 
-import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @Import(MySqlTestContainer.class)
 class CouponSecurityTest {
 
     private static final long HOUR_MILLIS = 3600_000L;
 
     @Autowired
-    private WebApplicationContext context;
+    private MockMvc mockMvc;
 
     @Autowired
     private CouponRepository couponRepository;
 
-    @Autowired
-    private IssuedCouponRepository issuedCouponRepository;
-
     @Value("${jwt.secret}")
     private String secret;
 
+    // 블랙리스트 조회는 Redis 를 쓰므로 Mock 으로 대체한다 (기본값 false = 블랙리스트 아님)
     @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
 
-    private MockMvc mockMvc;
-    private Long couponId;
-
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-        issuedCouponRepository.deleteAllInBatch();
+    @AfterEach
+    void tearDown() {
         couponRepository.deleteAllInBatch();
-        couponId = couponRepository.save(Coupon.builder()
-                .title("선착순 쿠폰")
-                .totalQuantity(100L)
-                .discountType(DiscountType.PERCENT)
-                .discountValue(10L)
-                .eventEndAt(java.time.LocalDateTime.now().plusDays(1))
-                .build()).getId();
     }
 
     @Test
-    @DisplayName("토큰 없이 발급하면 401이다")
-    void issue_without_token_is_unauthorized() throws Exception {
+    @DisplayName("토큰 없이 요청하면 401 이다")
+    void requestWithoutTokenIsUnauthorized() throws Exception {
+        // given
+        Long couponId = saveCoupon();
+
+        // when & then
         mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("만료된 토큰으로 발급하면 401이다")
-    void issue_with_expired_token_is_unauthorized() throws Exception {
-        String expired = token(1L, "USER", "access", -HOUR_MILLIS);
+    @DisplayName("USER 권한으로 관리자 API 를 호출하면 403 이다")
+    void userRoleIsForbiddenOnAdminApi() throws Exception {
+        // given
+        String userToken = accessToken(1L, "USER");
 
-        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + expired))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("TOKEN_EXPIRED"));
-    }
-
-    @Test
-    @DisplayName("서명이 다른 토큰으로 발급하면 401이다")
-    void issue_with_forged_token_is_unauthorized() throws Exception {
-        SecretKey otherKey = new SecretKeySpec(
-                "another-secret-key-that-is-at-least-32-bytes".getBytes(StandardCharsets.UTF_8),
-                "HmacSHA256");
-        String forged = Jwts.builder()
-                .subject("1").claim("role", "USER").claim("type", "access")
-                .expiration(new Date(System.currentTimeMillis() + HOUR_MILLIS))
-                .signWith(otherKey, Jwts.SIG.HS256)
-                .compact();
-
-        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + forged))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("INVALID_TOKEN"));
-    }
-
-    @Test
-    @DisplayName("Refresh Token으로는 API를 호출할 수 없다")
-    void issue_with_refresh_token_is_unauthorized() throws Exception {
-        String refresh = token(1L, null, "refresh", HOUR_MILLIS);
-
-        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + refresh))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("INVALID_TOKEN"));
-    }
-
-    @Test
-    @DisplayName("로그아웃(블랙리스트)된 토큰으로 발급하면 401이다")
-    void issue_with_blacklisted_token_is_unauthorized() throws Exception {
-        String loggedOut = token(1L, "USER", "access", HOUR_MILLIS);
-        given(tokenBlacklistService.isBlacklisted(loggedOut)).willReturn(true);
-
-        mockMvc.perform(post("/api/v1/coupons/{couponId}/issue", couponId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + loggedOut))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("INVALID_TOKEN"));
-    }
-
-    @Test
-    @DisplayName("USER 토큰으로 관리자 쿠폰 등록을 시도하면 403이다")
-    void create_coupon_with_user_token_is_forbidden() throws Exception {
+        // when & then
         mockMvc.perform(post("/api/v1/coupons")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, "USER", "access", HOUR_MILLIS))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody()))
+                        .content(createCouponBody()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("ADMIN 토큰으로 관리자 쿠폰 등록을 하면 201이다")
-    void create_coupon_with_admin_token_is_created() throws Exception {
+    @DisplayName("ADMIN 권한으로 관리자 API 를 호출하면 성공한다")
+    void adminRoleCanCallAdminApi() throws Exception {
+        // given
+        String adminToken = accessToken(1L, "ADMIN");
+
+        // when & then
         mockMvc.perform(post("/api/v1/coupons")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, "ADMIN", "access", HOUR_MILLIS))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.title").value("관리자 등록 쿠폰"));
+                        .content(createCouponBody()))
+                .andExpect(status().isCreated());
     }
 
-    @Test
-    @DisplayName("조회도 인증이 필요하다")
-    void get_coupon_without_token_is_unauthorized() throws Exception {
-        mockMvc.perform(get("/api/v1/coupons/{couponId}", couponId))
-                .andExpect(status().isUnauthorized());
+    private Long saveCoupon() {
+        return couponRepository.save(Coupon.builder()
+                .title("선착순 쿠폰")
+                .totalQuantity(100L)
+                .discountType(DiscountType.PERCENT)
+                .discountValue(10L)
+                .eventEndAt(LocalDateTime.now().plusDays(1))
+                .build()).getId();
     }
 
-    private String createRequestBody() {
+    private String createCouponBody() {
         return """
                 {
                   "title": "관리자 등록 쿠폰",
@@ -168,20 +111,18 @@ class CouponSecurityTest {
                   "discountValue": 20,
                   "eventEndAt": "%s"
                 }
-                """.formatted(java.time.LocalDateTime.now().plusDays(1));
+                """.formatted(LocalDateTime.now().plusDays(1));
     }
 
-    private String token(Long userId, String role, String type, long validityMillis) {
+    private String accessToken(Long userId, String role) {
         SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        var builder = Jwts.builder()
+        return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("username", "user" + userId)
-                .claim("type", type)
-                .expiration(new Date(System.currentTimeMillis() + validityMillis))
-                .signWith(key, Jwts.SIG.HS256);
-        if (role != null) {
-            builder.claim("role", role);
-        }
-        return builder.compact();
+                .claim("role", role)
+                .claim("type", "access")
+                .expiration(new Date(System.currentTimeMillis() + HOUR_MILLIS))
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
     }
 }

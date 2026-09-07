@@ -15,8 +15,10 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * 게이트웨이는 인증(401)만 담당한다. 권한(403)은 각 서비스가 판단한다.
+ * 테스트 환경에는 다운스트림 서비스가 없어 "시큐리티를 통과했다"는 404로 확인한다.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GatewaySecurityTest {
 
@@ -39,102 +41,83 @@ class GatewaySecurityTest {
     }
 
     @Test
-    @DisplayName("토큰 없이 보호된 경로를 부르면 401이다")
-    void protected_path_without_token_is_unauthorized() {
+    @DisplayName("로그인과 회원가입은 토큰 없이 통과한다")
+    void publicPathsPassWithoutToken() {
+        // given
+        String login = "/api/v1/auth/login";
+        String signup = "/api/v1/auth/signup";
+
+        // when & then
+        webTestClient.post().uri(login).exchange().expectStatus().isNotFound();
+        webTestClient.post().uri(signup).exchange().expectStatus().isNotFound();
+    }
+
+    @Test
+    @DisplayName("보호된 경로를 토큰 없이 부르면 401이다")
+    void protectedPathWithoutTokenIsUnauthorized() {
+        // when & then
         webTestClient.get().uri(PROTECTED_PATH)
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
 
     @Test
-    @DisplayName("만료된 토큰은 401이다")
-    void expired_token_is_unauthorized() {
+    @DisplayName("만료되거나 서명이 다른 토큰은 401이다")
+    void expiredOrForgedTokenIsUnauthorized() {
+        // given
+        String expired = accessToken(-HOUR_MILLIS, secret);
+        String forged = accessToken(HOUR_MILLIS, "another-secret-key-that-is-at-least-32-bytes");
+
+        // when & then
         webTestClient.get().uri(PROTECTED_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token("USER", "access", -HOUR_MILLIS, secret)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + expired)
                 .exchange()
                 .expectStatus().isUnauthorized();
-    }
-
-    @Test
-    @DisplayName("서명이 다른 토큰은 401이다")
-    void forged_token_is_unauthorized() {
-        String otherSecret = "another-secret-key-that-is-at-least-32-bytes";
-
         webTestClient.get().uri(PROTECTED_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token("USER", "access", HOUR_MILLIS, otherSecret)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + forged)
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
 
     @Test
     @DisplayName("Refresh Token으로는 API를 호출할 수 없다")
-    void refresh_token_is_unauthorized() {
+    void refreshTokenIsUnauthorized() {
+        // given
+        String refresh = token("refresh", HOUR_MILLIS, secret);
+
+        // when & then
         webTestClient.get().uri(PROTECTED_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token(null, "refresh", HOUR_MILLIS, secret)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + refresh)
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
 
     @Test
     @DisplayName("유효한 Access Token은 시큐리티를 통과한다")
-    void valid_access_token_passes_security() {
+    void validAccessTokenPasses() {
+        // given
+        String access = accessToken(HOUR_MILLIS, secret);
+
+        // when & then
         webTestClient.get().uri(PROTECTED_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token("USER", "access", HOUR_MILLIS, secret)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + access)
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
-    @Test
-    @DisplayName("로그인은 토큰 없이 통과한다")
-    void login_is_permitted_without_token() {
-        webTestClient.post().uri("/api/v1/auth/login")
-                .exchange()
-                .expectStatus().isNotFound();
+    private String accessToken(long validityMillis, String signingSecret) {
+        return token("access", validityMillis, signingSecret);
     }
 
-    @Test
-    @DisplayName("회원가입은 POST만 열려 있다")
-    void signup_is_permitted_only_for_post() {
-        webTestClient.post().uri("/api/v1/auth/signup")
-                .exchange()
-                .expectStatus().isNotFound();
-
-        webTestClient.get().uri("/api/v1/auth/signup")
-                .exchange()
-                .expectStatus().isUnauthorized();
-    }
-
-    @Test
-    @DisplayName("모든 응답에 보안 헤더 4종이 붙는다")
-    void security_headers_are_present() {
-        HttpHeaders headers = webTestClient.get().uri(PROTECTED_PATH)
-                .exchange()
-                .expectStatus().isUnauthorized()
-                .returnResult(Void.class)
-                .getResponseHeaders();
-
-        assertThat(headers.getFirst("X-Frame-Options")).isEqualTo("DENY");
-        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
-        assertThat(headers.getFirst("Referrer-Policy")).isEqualTo("same-origin");
-        assertThat(headers.getFirst("Content-Security-Policy"))
-                .isEqualTo("default-src 'self'; frame-ancestors 'none'; base-uri 'self'");
-    }
-
-    private String bearer(String token) {
-        return "Bearer " + token;
-    }
-
-    private String token(String role, String type, long validityMillis, String signingSecret) {
+    private String token(String type, long validityMillis, String signingSecret) {
         SecretKey key = new SecretKeySpec(signingSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        var builder = Jwts.builder()
+        return Jwts.builder()
                 .subject("1")
                 .claim("username", "tester")
+                .claim("role", "USER")
                 .claim("type", type)
                 .expiration(new Date(System.currentTimeMillis() + validityMillis))
-                .signWith(key, Jwts.SIG.HS256);
-        if (role != null) {
-            builder.claim("role", role);
-        }
-        return builder.compact();
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
     }
 }

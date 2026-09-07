@@ -37,6 +37,7 @@ spring:
         spring.json.trusted.packages: org.coupon.couponservice.kafka,org.coupon.common.event
     listener:
       ack-mode: manual
+      auto-startup: false   # 테스트는 브로커 없이 컨슈머 메서드를 직접 호출한다
 
 saga:
   listener:
