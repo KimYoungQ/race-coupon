@@ -8,7 +8,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.coupon.productservice.exception.ProductOutOfStockException;
 
 import java.time.LocalDateTime;
 
@@ -35,16 +34,5 @@ public class Product {
         this.price = price;
         this.stock = stock;
         this.createdAt = LocalDateTime.now();
-    }
-
-    public void decrease(long quantity) {
-        if (stock < quantity) {
-            throw new ProductOutOfStockException(id, stock, quantity);
-        }
-        this.stock -= quantity;
-    }
-
-    public void restore(long quantity) {
-        this.stock += quantity;
     }
 }

@@ -5,6 +5,8 @@ import org.coupon.common.event.StockReservationRequestPayload;
 import org.coupon.common.event.StockReservationResponsePayload;
 import org.coupon.common.event.StockResult;
 import org.coupon.productservice.domain.Product;
+import org.coupon.productservice.domain.ReservationStatus;
+import org.coupon.productservice.domain.StockReservation;
 import org.coupon.productservice.messaging.StockRequestHandler;
 import org.coupon.productservice.repository.ProductRepository;
 import org.coupon.productservice.repository.StockReservationRepository;
@@ -22,7 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -94,7 +102,7 @@ class StockSagaServiceTest {
         }
 
         @Test
-        @DisplayName("재고가 부족하면 아무것도 차감하지 않고 OUT_OF_STOCK 응답을 남긴다")
+        @DisplayName("재고가 부족하면 재고도 예약도 남기지 않고 OUT_OF_STOCK 응답만 남긴다")
         void reserveOutOfStock() {
             // given
             int tooMany = 999;
@@ -106,6 +114,62 @@ class StockSagaServiceTest {
             assertThat(currentStock()).isEqualTo(INITIAL_STOCK);
             assertThat(stockReservationRepository.findByOrderId(ORDER_ID)).isEmpty();
             assertThat(onlyResponse().result()).isEqualTo(StockResult.OUT_OF_STOCK);
+        }
+
+        @Test
+        @DisplayName("같은 주문이 다른 eventId로 다시 와도 재고를 두 번 깎지 않는다")
+        void duplicateRequestDeductsOnce() {
+            // given
+            stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.REQUEST, 2));
+            outboxEventRepository.deleteAllInBatch();
+
+            // when
+            stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.REQUEST, 2));
+
+            // then
+            assertThat(currentStock()).isEqualTo(8L);
+            assertThat(stockReservationRepository.count()).isEqualTo(1);
+            assertThat(onlyResponse().result()).isEqualTo(StockResult.RESERVED);
+        }
+
+        @Test
+        @DisplayName("동시에 예약해도 재고보다 많이 예약되지 않는다")
+        void concurrentReserveNeverExceedsStock() throws InterruptedException {
+            // given
+            int requestCount = 20;
+            List<Throwable> failures = Collections.synchronizedList(new ArrayList<>());
+            ExecutorService executor = Executors.newFixedThreadPool(10);
+            CountDownLatch latch = new CountDownLatch(requestCount);
+
+            // when
+            for (int i = 0; i < requestCount; i++) {
+                long orderId = 1000L + i;
+                executor.submit(() -> {
+                    try {
+                        stockRequestHandler.handle(
+                                UUID.randomUUID().toString(),
+                                UUID.randomUUID().toString(),
+                                request(RequestType.REQUEST, 1, orderId));
+                    } catch (Throwable t) {
+                        failures.add(t);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            latch.await();
+            executor.shutdown();
+
+            // then
+            assertThat(failures).isEmpty();
+            assertThat(currentStock()).isZero();
+
+            List<StockReservation> reservations = stockReservationRepository.findAll();
+            assertThat(reservations).hasSize((int) INITIAL_STOCK);
+            assertThat(reservations).allMatch(it -> it.getStatus() == ReservationStatus.RESERVED);
+
+            assertThat(countResponses(StockResult.RESERVED)).isEqualTo(INITIAL_STOCK);
+            assertThat(countResponses(StockResult.OUT_OF_STOCK)).isEqualTo(requestCount - INITIAL_STOCK);
         }
     }
 
@@ -119,14 +183,14 @@ class StockSagaServiceTest {
             // given
             stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.REQUEST, 2));
             assertThat(currentStock()).isEqualTo(8L);
+            outboxEventRepository.deleteAllInBatch();
 
             // when
             stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.CANCEL, 2));
 
             // then
             assertThat(currentStock()).isEqualTo(INITIAL_STOCK);
-            assertThat(outboxEventRepository.count()).isEqualTo(2);
-            assertThat(lastResponse().result()).isEqualTo(StockResult.RELEASED);
+            assertThat(onlyResponse().result()).isEqualTo(StockResult.RELEASED);
         }
 
         @Test
@@ -144,24 +208,43 @@ class StockSagaServiceTest {
             assertThat(currentStock()).isEqualTo(INITIAL_STOCK);
             assertThat(outboxEventRepository.count()).isEqualTo(outboxAfterFirstRelease + 1);
         }
+
+        @Test
+        @DisplayName("복구 수량은 취소 메시지가 아니라 예약에 남은 수량을 따른다")
+        void releaseRestoresReservedQuantity() {
+            // given
+            stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.REQUEST, 2));
+
+            // when
+            stockRequestHandler.handle(sagaId, UUID.randomUUID().toString(), request(RequestType.CANCEL, 99));
+
+            // then
+            assertThat(currentStock()).isEqualTo(INITIAL_STOCK);
+        }
     }
 
     private String request(RequestType type, int quantity) {
-        return sagaPayloadCodec.serialize(new StockReservationRequestPayload(ORDER_ID, productId, quantity, type));
+        return request(type, quantity, ORDER_ID);
+    }
+
+    private String request(RequestType type, int quantity, long orderId) {
+        return sagaPayloadCodec.serialize(new StockReservationRequestPayload(orderId, productId, quantity, type));
     }
 
     private long currentStock() {
         return productRepository.findById(productId).orElseThrow().getStock();
     }
 
+    private long countResponses(StockResult result) {
+        return outboxEventRepository.findAll().stream()
+                .map(this::responseOf)
+                .filter(it -> it.result() == result)
+                .count();
+    }
+
     private StockReservationResponsePayload onlyResponse() {
         assertThat(outboxEventRepository.count()).isEqualTo(1);
         return responseOf(outboxEventRepository.findAll().get(0));
-    }
-
-    private StockReservationResponsePayload lastResponse() {
-        var events = outboxEventRepository.findAll();
-        return responseOf(events.get(events.size() - 1));
     }
 
     private StockReservationResponsePayload responseOf(OutboxEvent event) {

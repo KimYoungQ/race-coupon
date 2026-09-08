@@ -12,11 +12,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.coupon.couponservice.exception.CouponAlreadyUsedException;
-import org.coupon.couponservice.exception.CouponNotOwnedException;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Getter
 @Entity
@@ -50,27 +47,5 @@ public class IssuedCoupon {
         this.couponId = couponId;
         this.status = IssuedCouponStatus.ISSUED;
         this.issuedAt = LocalDateTime.now();
-    }
-
-    public void use(Long orderId, Long userId) {
-        if (!Objects.equals(this.userId, userId)) {
-            throw new CouponNotOwnedException(id);
-        }
-        if (status == IssuedCouponStatus.USED) {
-            throw new CouponAlreadyUsedException(id);
-        }
-        this.status = IssuedCouponStatus.USED;
-        this.orderId = orderId;
-        this.usedAt = LocalDateTime.now();
-    }
-
-    public boolean restore(Long orderId) {
-        if (status != IssuedCouponStatus.USED || !Objects.equals(this.orderId, orderId)) {
-            return false;
-        }
-        this.status = IssuedCouponStatus.ISSUED;
-        this.orderId = null;
-        this.usedAt = null;
-        return true;
     }
 }

@@ -1,10 +1,12 @@
 package org.coupon.productservice.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,7 +32,7 @@ public class StockReservation {
     private Long orderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Product product;
 
     private Long quantity;
@@ -44,13 +46,5 @@ public class StockReservation {
         this.product = product;
         this.quantity = quantity;
         this.status = ReservationStatus.RESERVED;
-    }
-
-    public boolean restore() {
-        if (status == ReservationStatus.RESTORED) {
-            return false;
-        }
-        this.status = ReservationStatus.RESTORED;
-        return true;
     }
 }

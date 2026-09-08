@@ -4,6 +4,7 @@ import org.coupon.common.event.CouponApplyRequestPayload;
 import org.coupon.common.event.CouponApplyResponsePayload;
 import org.coupon.common.event.CouponResult;
 import org.coupon.common.event.RequestType;
+import org.coupon.common.exception.ErrorCode;
 import org.coupon.couponservice.domain.Coupon;
 import org.coupon.couponservice.domain.DiscountType;
 import org.coupon.couponservice.domain.IssuedCoupon;
@@ -25,7 +26,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -111,6 +116,72 @@ class CouponSagaServiceTest {
             assertThat(outboxEventRepository.count()).isEqualTo(1);
             assertThat(consumedMessageRepository.count()).isEqualTo(1);
         }
+
+        @Test
+        @DisplayName("같은 주문이 다른 eventId 로 다시 요청하면 거절되고 쿠폰은 다시 묶이지 않는다")
+        void sameOrderIsRejectedOnRetry() {
+            // given
+            Long couponId = saveCoupon();
+            IssuedCoupon issued = issueCoupon(couponId);
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            outboxEventRepository.deleteAllInBatch();
+
+            // when
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+
+            // then
+            CouponApplyResponsePayload response = onlyResponse();
+            assertThat(response.result()).isEqualTo(CouponResult.REJECTED);
+            assertThat(response.failureCode()).isEqualTo(ErrorCode.COUPON_ALREADY_USED.getCode());
+            assertThat(reload(issued).getOrderId()).isEqualTo(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("같은 발급 쿠폰을 여러 주문이 동시에 사용해도 한 주문만 적용된다")
+        void onlyOneOrderAppliesCoupon() throws InterruptedException {
+            // given
+            Long couponId = saveCoupon();
+            IssuedCoupon issued = issueCoupon(couponId);
+            int orderCount = 10;
+
+            // when
+            ExecutorService executor = Executors.newFixedThreadPool(orderCount);
+            CountDownLatch latch = new CountDownLatch(orderCount);
+            for (int i = 0; i < orderCount; i++) {
+                long orderId = 1000L + i;
+                executor.submit(() -> {
+                    try {
+                        couponApplyHandler.handle(
+                                "saga-" + orderId,
+                                UUID.randomUUID().toString(),
+                                requestBody(orderId, couponId, RequestType.REQUEST));
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            latch.await();
+            executor.shutdown();
+
+            // then
+            List<CouponApplyResponsePayload> responses = allResponses();
+            assertThat(responses).hasSize(orderCount);
+
+            List<CouponApplyResponsePayload> applied = responses.stream()
+                    .filter(response -> response.result() == CouponResult.APPLIED)
+                    .toList();
+            assertThat(applied).hasSize(1);
+
+            assertThat(responses)
+                    .filteredOn(response -> response.result() == CouponResult.REJECTED)
+                    .hasSize(orderCount - 1)
+                    .allSatisfy(response -> assertThat(response.failureCode())
+                            .isEqualTo(ErrorCode.COUPON_ALREADY_USED.getCode()));
+
+            IssuedCoupon after = reload(issued);
+            assertThat(after.getStatus()).isEqualTo(IssuedCouponStatus.USED);
+            assertThat(after.getOrderId()).isEqualTo(applied.get(0).orderId());
+        }
     }
 
     @Nested
@@ -157,6 +228,26 @@ class CouponSagaServiceTest {
             assertThat(outboxEventRepository.count()).isEqualTo(1);
             assertThat(onlyResponse().result()).isEqualTo(CouponResult.CANCELLED);
         }
+
+        @Test
+        @DisplayName("다른 주문의 취소는 쿠폰 사용을 해제하지 않는다")
+        void cancelFromAnotherOrderKeepsCouponUsed() {
+            // given
+            Long couponId = saveCoupon();
+            IssuedCoupon issued = issueCoupon(couponId);
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            outboxEventRepository.deleteAllInBatch();
+
+            // when
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(),
+                    requestBody(999L, couponId, RequestType.CANCEL));
+
+            // then
+            IssuedCoupon after = reload(issued);
+            assertThat(after.getStatus()).isEqualTo(IssuedCouponStatus.USED);
+            assertThat(after.getOrderId()).isEqualTo(ORDER_ID);
+            assertThat(onlyResponse().result()).isEqualTo(CouponResult.CANCELLED);
+        }
     }
 
     private Long saveCoupon() {
@@ -175,8 +266,12 @@ class CouponSagaServiceTest {
     }
 
     private String requestBody(Long couponId, RequestType type) {
+        return requestBody(ORDER_ID, couponId, type);
+    }
+
+    private String requestBody(Long orderId, Long couponId, RequestType type) {
         return sagaPayloadCodec.serialize(
-                new CouponApplyRequestPayload(ORDER_ID, USER_ID, couponId, ORDER_AMOUNT, type));
+                new CouponApplyRequestPayload(orderId, USER_ID, couponId, ORDER_AMOUNT, type));
     }
 
     private IssuedCoupon reload(IssuedCoupon issued) {
@@ -186,5 +281,11 @@ class CouponSagaServiceTest {
     private CouponApplyResponsePayload onlyResponse() {
         OutboxEvent event = outboxEventRepository.findAll().get(0);
         return sagaPayloadCodec.deserialize(event.getPayload(), CouponApplyResponsePayload.class);
+    }
+
+    private List<CouponApplyResponsePayload> allResponses() {
+        return outboxEventRepository.findAll().stream()
+                .map(event -> sagaPayloadCodec.deserialize(event.getPayload(), CouponApplyResponsePayload.class))
+                .toList();
     }
 }
