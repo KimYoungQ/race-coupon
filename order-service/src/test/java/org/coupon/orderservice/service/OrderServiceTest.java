@@ -1,5 +1,8 @@
 package org.coupon.orderservice.service;
 
+import feign.Request;
+import feign.RetryableException;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.coupon.common.exception.BusinessException;
 import org.coupon.common.exception.ErrorCode;
 import org.coupon.orderservice.client.CouponClient;
@@ -13,12 +16,15 @@ import org.coupon.orderservice.saga.framework.SagaStateRepository;
 import org.coupon.orderservice.support.MySqlTestContainer;
 import org.coupon.sagapersistence.outbox.OutboxEventRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -51,9 +57,18 @@ class OrderServiceTest {
     @Autowired
     private OutboxEventRepository outboxEventRepository;
 
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
     // 쿠폰 사전 검증은 쿠폰 서비스 HTTP 호출이므로 Mock 으로 대체한다 (기본값 = 통과)
     @MockitoBean
     private CouponClient couponClient;
+
+    @BeforeEach
+    void resetCircuit() {
+        // CouponChecker 의 서킷은 스프링 컨텍스트에 하나뿐이라 테스트끼리 공유된다. 앞 테스트의 실패 기록이 새지 않도록 매번 닫는다
+        circuitBreakerRegistry.circuitBreaker("coupon-service").reset();
+    }
 
     @AfterEach
     void cleanUp() {
@@ -103,6 +118,24 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("쿠폰 서비스가 응답하지 못하면 503 으로 거절되고 주문은 만들어지지 않는다")
+    void createWhenCouponServiceDoesNotRespond() {
+        // given
+        doThrow(retryableException()).when(couponClient).checkUsable(COUPON_ID);
+        OrderCreateRequest request = new OrderCreateRequest(PRODUCT_ID, QUANTITY, COUPON_ID);
+
+        // when
+        Throwable thrown = catchThrowable(() -> orderService.create(USER_ID, request));
+
+        // then
+        assertThat(thrown).isInstanceOf(BusinessException.class);
+        assertThat(((BusinessException) thrown).getErrorCode()).isEqualTo(ErrorCode.COUPON_SERVICE_UNAVAILABLE);
+        assertThat(orderRepository.count()).isZero();
+        assertThat(sagaStateRepository.count()).isZero();
+        assertThat(outboxEventRepository.count()).isZero();
+    }
+
+    @Test
     @DisplayName("쿠폰 없이 주문하면 쿠폰 서비스를 호출하지 않는다")
     void createWithoutCoupon() {
         // given
@@ -114,5 +147,12 @@ class OrderServiceTest {
         // then
         verify(couponClient, never()).checkUsable(anyLong());
         assertThat(orderRepository.findById(response.orderId())).isPresent();
+    }
+
+    // 연결 실패·타임아웃 때 Feign 이 던지는 예외 (status -1 = HTTP 응답 자체가 없었다는 뜻)
+    private static RetryableException retryableException() {
+        Request request = Request.create(Request.HttpMethod.GET, "/api/v1/coupons/" + COUPON_ID + "/usable",
+                Map.of(), Request.Body.empty(), null);
+        return new RetryableException(-1, "connect timed out", Request.HttpMethod.GET, (Long) null, request);
     }
 }

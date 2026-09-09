@@ -57,3 +57,19 @@ spring:
           default:                    # 모든 Feign 클라이언트 공통 설정
             connect-timeout: 2000     # 2초
             read-timeout: 5000        # 5초
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      coupon-service:                                   # CouponChecker 의 @CircuitBreaker(name) 과 같아야 한다
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10                         # 최근 10건 기준
+        minimum-number-of-calls: 5                      # 5건은 모여야 실패율을 계산한다
+        failure-rate-threshold: 50                      # 실패율 50% 이상이면 열린다
+        wait-duration-in-open-state: 10s                # 열린 뒤 10초 후 half-open
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - feign.FeignException                        # 연결 실패·타임아웃(RetryableException)·5xx
+        ignore-exceptions:
+          - org.coupon.common.exception.BusinessException   # 쿠폰 서비스가 멀쩡히 답한 4xx 는 실패가 아니다

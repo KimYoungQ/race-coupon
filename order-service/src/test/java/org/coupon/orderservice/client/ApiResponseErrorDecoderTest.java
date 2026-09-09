@@ -1,6 +1,7 @@
 package org.coupon.orderservice.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
 import feign.Request;
 import feign.Response;
 import org.coupon.common.exception.BusinessException;
@@ -34,10 +35,10 @@ class ApiResponseErrorDecoderTest {
     }
 
     @Test
-    @DisplayName("본문이 JSON 이 아니면 INTERNAL_ERROR 로 바꾼다")
+    @DisplayName("4xx 본문이 JSON 이 아니면 INTERNAL_ERROR 로 바꾼다")
     void decodeNonJsonBody() {
         // given
-        Response response = errorResponse(503, "Service Unavailable");
+        Response response = errorResponse(400, "Bad Request");
 
         // when
         Exception decoded = decoder.decode("CouponClient#checkUsable(Long)", response);
@@ -45,6 +46,21 @@ class ApiResponseErrorDecoderTest {
         // then
         assertThat(decoded).isInstanceOf(BusinessException.class);
         assertThat(((BusinessException) decoded).getErrorCode()).isEqualTo(ErrorCode.INTERNAL_ERROR);
+    }
+
+    @Test
+    @DisplayName("5xx 는 서킷이 셀 수 있도록 FeignException 그대로 둔다")
+    void keepFeignExceptionForServerError() {
+        // given
+        Response response = errorResponse(503, "Service Unavailable");
+
+        // when
+        Exception decoded = decoder.decode("CouponClient#checkUsable(Long)", response);
+
+        // then
+        assertThat(decoded).isInstanceOf(FeignException.class);
+        assertThat(decoded).isNotInstanceOf(BusinessException.class);
+        assertThat(((FeignException) decoded).status()).isEqualTo(503);
     }
 
     private Response errorResponse(int status, String body) {

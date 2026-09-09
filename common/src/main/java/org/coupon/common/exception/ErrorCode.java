@@ -35,7 +35,8 @@ public enum ErrorCode {
     COUPON_NOT_OWNED("COUPON_NOT_OWNED", "본인의 쿠폰이 아닙니다", HttpStatus.FORBIDDEN),
     COUPON_ALREADY_USED("COUPON_ALREADY_USED", "이미 사용된 쿠폰입니다", HttpStatus.CONFLICT),
     COUPON_MIN_ORDER_AMOUNT_NOT_MET("COUPON_MIN_ORDER_AMOUNT_NOT_MET", "최소 주문 금액을 충족하지 않습니다", HttpStatus.CONFLICT),
-    COUPON_NOT_ISSUED_YET("COUPON_NOT_ISSUED_YET", "쿠폰 발급이 아직 반영되지 않았습니다", HttpStatus.CONFLICT);
+    COUPON_NOT_ISSUED_YET("COUPON_NOT_ISSUED_YET", "쿠폰 발급이 아직 반영되지 않았습니다", HttpStatus.CONFLICT),
+    COUPON_SERVICE_UNAVAILABLE("COUPON_SERVICE_UNAVAILABLE", "쿠폰 확인을 할 수 없습니다. 잠시 후 다시 시도해 주세요", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final String code;
     private final String message;

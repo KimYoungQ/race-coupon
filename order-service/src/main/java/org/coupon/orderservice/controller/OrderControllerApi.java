@@ -40,6 +40,7 @@ public interface OrderControllerApi {
                     `couponId`를 보내면 접수 전에 쿠폰 서비스에 "내가 쓸 수 있는 쿠폰인지" 확인한다.
                     없는 쿠폰(404)·발급 이력 없음(409)·이미 쓴 쿠폰(409)이면 주문은 만들어지지 않는다.
                     사전 검증은 조회일 뿐이고 실제 쿠폰 사용 처리는 사가가 하므로, 202 이후에도 쿠폰 단계에서 실패할 수 있다.
+                    쿠폰 서비스가 응답하지 못하면(타임아웃·장애로 서킷 열림) 503으로 즉시 거절한다.
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "주문 접수 (처리는 비동기로 계속)",
@@ -56,7 +57,10 @@ public interface OrderControllerApi {
                             {"success":false,"data":null,"errorCode":"COUPON_NOT_FOUND","errorMessage":"쿠폰을 찾을 수 없습니다: 10"}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "발급 이력 없음(미반영 포함) · 이미 사용한 쿠폰",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":false,"data":null,"errorCode":"COUPON_ALREADY_USED","errorMessage":"이미 사용된 쿠폰입니다: userId=42, couponId=1"}""")))
+                            {"success":false,"data":null,"errorCode":"COUPON_ALREADY_USED","errorMessage":"이미 사용된 쿠폰입니다: userId=42, couponId=1"}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "쿠폰 서비스 응답 없음 (서킷 열림 또는 타임아웃)",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"COUPON_SERVICE_UNAVAILABLE","errorMessage":"쿠폰 확인을 할 수 없습니다. 잠시 후 다시 시도해 주세요"}""")))
     })
     ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
             @RequestBody(description = "주문 생성 요청", required = true,

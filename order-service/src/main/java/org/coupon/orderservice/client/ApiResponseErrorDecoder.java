@@ -2,6 +2,7 @@ package org.coupon.orderservice.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
 import feign.Response;
 import feign.codec.ErrorDecoder;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,7 @@ import org.coupon.common.response.ApiResponse;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * 다른 서비스가 돌려준 ApiResponse 의 errorCode 를 같은 ErrorCode 의 BusinessException 으로 바꾼다.
- * 모든 서비스가 같은 ErrorCode 규약을 쓰므로 호출한 쪽에서도 같은 HTTP 상태로 응답할 수 있다.
- */
+
 @Slf4j
 @RequiredArgsConstructor
 public class ApiResponseErrorDecoder implements ErrorDecoder {
@@ -28,6 +26,10 @@ public class ApiResponseErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
+        // 5xx 는 Feign 기본 예외 그대로 (서킷 브레이커가 FeignException 만 실패로 센다)
+        if (response.status() >= 500) {
+            return FeignException.errorStatus(methodKey, response);
+        }
         ApiResponse<Void> body = readBody(methodKey, response);
         if (body == null || body.getErrorCode() == null) {
             log.warn("원격 서비스가 에러 코드 없이 실패 응답: method={}, status={}", methodKey, response.status());
