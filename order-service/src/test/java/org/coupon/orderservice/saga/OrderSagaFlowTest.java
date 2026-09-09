@@ -6,6 +6,7 @@ import org.coupon.common.event.RequestType;
 import org.coupon.common.event.StockReservationResponsePayload;
 import org.coupon.common.event.StockResult;
 import org.coupon.common.saga.SagaStatus;
+import org.coupon.orderservice.client.CouponClient;
 import org.coupon.orderservice.domain.Order;
 import org.coupon.orderservice.domain.OrderStatus;
 import org.coupon.orderservice.dto.OrderCreateRequest;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +52,10 @@ class OrderSagaFlowTest {
 
         @Autowired
         private SagaResponseHandler sagaResponseHandler;
+
+    // 쿠폰 사전 검증은 쿠폰 서비스 HTTP 호출이므로 Mock 으로 대체한다 (기본값 = 통과)
+    @MockitoBean
+    private CouponClient couponClient;
 
     @Autowired
     private OrderRepository orderRepository;

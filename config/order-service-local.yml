@@ -17,3 +17,14 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            logger-level: full
+
+logging:
+  level:
+    org.coupon.orderservice.client.CouponClient: DEBUG

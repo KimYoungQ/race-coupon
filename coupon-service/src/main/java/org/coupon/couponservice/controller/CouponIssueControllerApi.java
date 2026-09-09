@@ -91,4 +91,32 @@ public interface CouponIssueControllerApi {
     ResponseEntity<ApiResponse<CouponStockResponse>> getCoupon(
             @Parameter(in = ParameterIn.PATH, description = "조회할 쿠폰 ID", required = true, example = "1")
             Long couponId);
+
+    @Operation(
+            summary = "내가 지금 쓸 수 있는 쿠폰인지 확인",
+            description = """
+                    검증된 토큰의 사용자가 이 쿠폰을 **발급받았고 아직 쓰지 않았는지** 확인한다.
+                    주문 서비스가 주문을 접수하기 전에 쿠폰 ID를 검증하는 용도다. 실제 사용 처리는 주문 사가가 한다.
+
+                    발급 이력은 Kafka로 비동기 반영되므로 발급 직후에는 409(`COUPON_NOT_ISSUED_YET`)가 날 수 있다.
+                    오류가 아니라 정상 흐름이며, 사가의 쿠폰 적용과 같은 에러 코드를 쓴다.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "사용 가능",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":true,"data":null,"errorCode":null,"errorMessage":null}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "쿠폰 없음",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"COUPON_NOT_FOUND","errorMessage":"쿠폰을 찾을 수 없습니다: 1"}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "발급 이력 없음(미반영 포함) · 이미 사용한 쿠폰",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"COUPON_ALREADY_USED","errorMessage":"이미 사용된 쿠폰입니다: userId=42, couponId=1"}""")))
+    })
+    ResponseEntity<ApiResponse<Void>> checkUsableCoupon(
+            @Parameter(in = ParameterIn.PATH, description = "확인할 쿠폰 ID", required = true, example = "1")
+            Long couponId,
+            @Parameter(hidden = true) AuthenticatedUser user);
 }

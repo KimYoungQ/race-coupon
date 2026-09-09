@@ -35,6 +35,11 @@ public interface OrderControllerApi {
                     ### 상태 흐름
                     `CREATED` → `STOCK_RESERVED` → `COMPLETED`,
                     실패 시 `COMPENSATING` → `FAILED` 또는 곧바로 `FAILED`.
+
+                    ### 쿠폰 사전 검증
+                    `couponId`를 보내면 접수 전에 쿠폰 서비스에 "내가 쓸 수 있는 쿠폰인지" 확인한다.
+                    없는 쿠폰(404)·발급 이력 없음(409)·이미 쓴 쿠폰(409)이면 주문은 만들어지지 않는다.
+                    사전 검증은 조회일 뿐이고 실제 쿠폰 사용 처리는 사가가 하므로, 202 이후에도 쿠폰 단계에서 실패할 수 있다.
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "주문 접수 (처리는 비동기로 계속)",
@@ -45,13 +50,19 @@ public interface OrderControllerApi {
                             {"success":false,"data":null,"errorCode":"INVALID_INPUT","errorMessage":"수량은 1 이상이어야 합니다"}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}""")))
+                            {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "쿠폰 없음",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"COUPON_NOT_FOUND","errorMessage":"쿠폰을 찾을 수 없습니다: 10"}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "발급 이력 없음(미반영 포함) · 이미 사용한 쿠폰",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"COUPON_ALREADY_USED","errorMessage":"이미 사용된 쿠폰입니다: userId=42, couponId=1"}""")))
     })
     ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
             @RequestBody(description = "주문 생성 요청", required = true,
                     content = @Content(schema = @Schema(implementation = OrderCreateRequest.class),
                             examples = @ExampleObject(value = """
-                                    {"productId":1,"quantity":2,"couponId":10}""")))
+                                    {"productId":1,"quantity":2,"couponId":1}""")))
             @Valid OrderCreateRequest request,
             @Parameter(hidden = true) AuthenticatedUser user);
 
@@ -61,7 +72,7 @@ public interface OrderControllerApi {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
-                            {"success":true,"data":[{"orderId":1,"status":"COMPLETED","couponId":10,"totalAmount":20000,"discountAmount":2000,"finalAmount":18000,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:02","items":[{"productId":1,"productName":"무선 이어폰","unitPrice":10000,"quantity":2}]}],"errorCode":null,"errorMessage":null}"""))),
+                            {"success":true,"data":[{"orderId":1,"status":"COMPLETED","couponId":1,"totalAmount":20000,"discountAmount":2000,"finalAmount":18000,"failureCode":null,"createdAt":"2026-07-27T10:00:00","updatedAt":"2026-07-27T10:00:02","items":[{"productId":1,"productName":"무선 이어폰","unitPrice":10000,"quantity":2}]}],"errorCode":null,"errorMessage":null}"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                             {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}""")))

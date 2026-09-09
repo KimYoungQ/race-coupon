@@ -53,4 +53,12 @@ public class CouponIssueController implements CouponIssueControllerApi {
     public ResponseEntity<ApiResponse<CouponStockResponse>> getCoupon(@PathVariable Long couponId) {
         return ResponseEntity.ok(ApiResponse.success(couponIssueService.getCouponInfo(couponId)));
     }
+
+    @GetMapping("/{couponId}/usable")
+    public ResponseEntity<ApiResponse<Void>> checkUsableCoupon(
+            @PathVariable Long couponId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        couponService.checkUsable(user.getUserId(), couponId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

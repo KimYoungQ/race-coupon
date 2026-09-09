@@ -2,6 +2,7 @@ package org.coupon.orderservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.coupon.orderservice.client.CouponClient;
 import org.coupon.orderservice.domain.Order;
 import org.coupon.orderservice.dto.OrderCreateRequest;
 import org.coupon.orderservice.dto.OrderCreateResponse;
@@ -27,9 +28,15 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final SagaManager sagaManager;
+    private final CouponClient couponClient;
 
     @Transactional
     public OrderCreateResponse create(Long userId, OrderCreateRequest request) {
+        // 없는 쿠폰·남의 쿠폰·이미 쓴 쿠폰은 주문을 받기 전에 걸러낸다 (실제 사용 처리는 사가가 한다)
+        if (request.couponId() != null) {
+            couponClient.checkUsable(request.couponId());
+        }
+
         Order order = Order.builder()
                 .userId(userId)
                 .couponId(request.couponId())

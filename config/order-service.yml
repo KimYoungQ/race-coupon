@@ -49,3 +49,11 @@ spring:
     init:
       mode: always
       encoding: UTF-8
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:                    # 모든 Feign 클라이언트 공통 설정
+            connect-timeout: 2000     # 2초
+            read-timeout: 5000        # 5초
