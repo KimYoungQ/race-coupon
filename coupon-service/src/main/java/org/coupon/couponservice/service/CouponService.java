@@ -3,6 +3,7 @@ package org.coupon.couponservice.service;
 import lombok.RequiredArgsConstructor;
 import org.coupon.couponservice.domain.IssuedCouponStatus;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
+import org.coupon.couponservice.dto.MyCouponResponse;
 import org.coupon.couponservice.exception.CouponAlreadyUsedException;
 import org.coupon.couponservice.exception.CouponNotFoundException;
 import org.coupon.couponservice.exception.CouponNotIssuedYetException;
@@ -29,6 +30,11 @@ public class CouponService {
                 couponRepository.findIssuableBy(userId, LocalDateTime.now()));
     }
     
+    @Transactional(readOnly = true)
+    public List<MyCouponResponse> findMyCoupons(Long userId) {
+        return issuedCouponRepository.findMyCoupons(userId);
+    }
+
     @Transactional(readOnly = true)
     public void checkUsable(Long userId, Long couponId) {
         if (!couponRepository.existsById(couponId)) {

@@ -1,12 +1,17 @@
 package org.coupon.couponservice.repository;
 
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.coupon.couponservice.domain.IssuedCouponStatus;
+import org.coupon.couponservice.dto.MyCouponResponse;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
+import static org.coupon.couponservice.domain.QCoupon.coupon;
 import static org.coupon.couponservice.domain.QIssuedCoupon.issuedCoupon;
 
 @RequiredArgsConstructor
@@ -21,6 +26,32 @@ public class IssuedCouponRepositoryImpl implements IssuedCouponRepositoryCustom 
                 .where(issuedCoupon.couponId.eq(couponId))
                 .fetchOne();
         return Optional.ofNullable(count).orElse(0L);
+    }
+
+    public List<MyCouponResponse> findMyCoupons(Long userId) {
+        return queryFactory
+                .select(Projections.constructor(MyCouponResponse.class,
+                        coupon.id,
+                        coupon.title,
+                        coupon.discountType,
+                        coupon.discountValue,
+                        coupon.maxDiscountAmount,
+                        coupon.minOrderAmount,
+                        coupon.eventEndAt,
+                        issuedCoupon.status,
+                        issuedCoupon.issuedAt,
+                        issuedCoupon.usedAt,
+                        issuedCoupon.orderId))
+                .from(issuedCoupon)
+                .join(coupon).on(coupon.id.eq(issuedCoupon.couponId))
+                .where(issuedCoupon.userId.eq(userId))
+                .orderBy(
+                        new CaseBuilder()
+                                .when(issuedCoupon.status.eq(IssuedCouponStatus.ISSUED)).then(0)
+                                .otherwise(1).asc(),
+                        issuedCoupon.issuedAt.desc(),
+                        issuedCoupon.id.desc())
+                .fetch();
     }
 
     public IssuedCouponStatus findStatusBy(Long userId, Long couponId) {

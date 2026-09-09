@@ -11,6 +11,7 @@ import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
 import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
+import org.coupon.couponservice.dto.MyCouponResponse;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.springframework.http.ResponseEntity;
 
@@ -75,6 +76,33 @@ public interface CouponIssueControllerApi {
                             {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}""")))
     })
     ResponseEntity<ApiResponse<List<IssuableCouponResponse>>> getIssuableCoupons(
+            @Parameter(hidden = true) AuthenticatedUser user);
+
+    @Operation(
+            summary = "내 쿠폰 목록",
+            description = """
+                    검증된 토큰의 사용자가 발급받은 쿠폰을 **전부** 반환한다. 사용한 것(`USED`)과
+                    이벤트가 종료된 것도 그대로 포함한다. 상태나 기간으로 거르지 않는다.
+
+                    ### 정렬
+                    사용 가능(`ISSUED`)한 쿠폰이 먼저 오고, 그 안에서는 최근 발급순이다.
+
+                    ### 한 건에 담기는 값
+                    - 쿠폰 정보: `couponId`, `title`, `discountType`, `discountValue`, `maxDiscountAmount`, `minOrderAmount`, `eventEndAt`
+                    - 발급 정보: `status`, `issuedAt`, `usedAt`, `orderId` — 아직 쓰지 않았다면 `usedAt`·`orderId`는 null이다.
+
+                    ### 주의
+                    발급 이력이 없으면 빈 배열을 반환한다. 오류가 아니다.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":true,"data":[{"couponId":1,"title":"신규가입 10% 할인","discountType":"PERCENT","discountValue":10,"maxDiscountAmount":5000,"minOrderAmount":10000,"eventEndAt":"2026-12-31T23:59:59","status":"ISSUED","issuedAt":"2026-09-09T10:00:00","usedAt":null,"orderId":null},{"couponId":2,"title":"가을맞이 3000원 할인","discountType":"FIXED","discountValue":3000,"maxDiscountAmount":null,"minOrderAmount":20000,"eventEndAt":"2026-10-31T23:59:59","status":"USED","issuedAt":"2026-09-01T09:00:00","usedAt":"2026-09-05T19:20:30","orderId":1001}],"errorCode":null,"errorMessage":null}"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "토큰 없음·만료·위조",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"success":false,"data":null,"errorCode":"UNAUTHORIZED","errorMessage":"인증이 필요합니다"}""")))
+    })
+    ResponseEntity<ApiResponse<List<MyCouponResponse>>> getMyCoupons(
             @Parameter(hidden = true) AuthenticatedUser user);
 
     @Operation(

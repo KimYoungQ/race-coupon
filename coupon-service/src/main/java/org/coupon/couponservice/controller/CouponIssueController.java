@@ -6,6 +6,7 @@ import org.coupon.common.response.ApiResponse;
 import org.coupon.couponservice.dto.CouponIssueAcceptedResponse;
 import org.coupon.couponservice.dto.CouponStockResponse;
 import org.coupon.couponservice.dto.IssuableCouponResponse;
+import org.coupon.couponservice.dto.MyCouponResponse;
 import org.coupon.couponservice.metrics.CouponIssueMetrics;
 import org.coupon.couponservice.security.AuthenticatedUser;
 import org.coupon.couponservice.service.CouponService;
@@ -47,6 +48,12 @@ public class CouponIssueController implements CouponIssueControllerApi {
         CouponIssueAcceptedResponse response = couponIssueService.issue(couponId, userId);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<MyCouponResponse>>> getMyCoupons(
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(ApiResponse.success(couponService.findMyCoupons(user.getUserId())));
     }
 
     @GetMapping("/{couponId}")
