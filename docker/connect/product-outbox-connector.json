@@ -19,7 +19,7 @@
     "schema.history.internal.kafka.topic": "schema-history.product_service",
     "transforms": "outbox",
     "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
-    "transforms.outbox.table.fields.additional.placement": "type:header:eventType",
+    "transforms.outbox.table.fields.additional.placement": "type:header:eventType,traceparent:header:traceparent,tracestate:header:tracestate",
     "transforms.outbox.route.topic.replacement": "${routedByValue}.response"
   }
 }

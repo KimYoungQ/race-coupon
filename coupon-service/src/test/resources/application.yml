@@ -46,6 +46,18 @@ saga:
 jwt:
   secret: test-only-secret-key-for-hs256-minimum-32-bytes
 
+management:
+  tracing:
+    export:
+      otlp:
+        enabled: false          # 테스트에서는 스팬을 Jaeger(4318)로 보내지 않는다. Tracer 자체는 살아 있다.
+                                # 전역 키(management.tracing.export.enabled)를 쓰면 안 된다. 그 키는 W3C
+                                # 전파기 빈까지 함께 꺼서 outbox 의 traceparent 가 null 로 저장된다.
+  defaults:
+    metrics:
+      export:
+        enabled: false          # micrometer-registry-otlp 이 4318 로 지표를 보내는 것도 함께 막는다
+
 logging:
   level:
     root: WARN

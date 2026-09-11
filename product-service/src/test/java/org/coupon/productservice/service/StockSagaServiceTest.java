@@ -223,12 +223,12 @@ class StockSagaServiceTest {
         }
     }
 
-    private String request(RequestType type, int quantity) {
+    private StockReservationRequestPayload request(RequestType type, int quantity) {
         return request(type, quantity, ORDER_ID);
     }
 
-    private String request(RequestType type, int quantity, long orderId) {
-        return sagaPayloadCodec.serialize(new StockReservationRequestPayload(orderId, productId, quantity, type));
+    private StockReservationRequestPayload request(RequestType type, int quantity, long orderId) {
+        return new StockReservationRequestPayload(orderId, productId, quantity, type);
     }
 
     private long currentStock() {

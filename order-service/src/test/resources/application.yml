@@ -66,3 +66,20 @@ logging:
   level:
     root: WARN
     org.coupon.orderservice: INFO
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0            # 테스트가 스팬을 읽어야 하므로 전부 샘플링한다
+    export:
+      otlp:
+        enabled: false            # 테스트에서 Jaeger(4318)로 스팬을 보내지 않는다.
+                                  # 전역 키 management.tracing.export.enabled 를 끄면
+                                  # W3C TextMapPropagator 까지 @ConditionalOnEnabledTracingExport 로 꺼져
+                                  # traceparent 전파 자체가 죽는다. 그래서 OTLP 전송만 골라서 끈다.
+                                  # (추적을 켜지 않는 평범한 @SpringBootTest 는 spring-boot-micrometer-tracing-test 가
+                                  #  전역 키를 알아서 false 로 넣어 주므로 어차피 아무것도 나가지 않는다.)
+  defaults:
+    metrics:
+      export:
+        enabled: false            # micrometer-registry-otlp 이 4318 로 지표를 보내는 것도 함께 막는다

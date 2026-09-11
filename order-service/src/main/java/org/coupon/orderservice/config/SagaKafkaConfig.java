@@ -38,6 +38,7 @@ public class SagaKafkaConfig {
         factory.setAutoStartup(autoStartup);
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(200L, 5L)));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 }

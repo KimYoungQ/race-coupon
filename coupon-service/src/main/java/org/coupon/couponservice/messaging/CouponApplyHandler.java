@@ -6,7 +6,6 @@ import org.coupon.common.event.CouponApplyRequestPayload;
 import org.coupon.common.event.CouponApplyResponsePayload;
 import org.coupon.couponservice.service.CouponSagaService;
 import org.coupon.sagapersistence.idempotency.MessageLog;
-import org.coupon.sagapersistence.outbox.SagaPayloadCodec;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,19 +16,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class CouponApplyHandler {
 
     private final MessageLog messageLog;
-    private final SagaPayloadCodec sagaPayloadCodec;
     private final CouponSagaService couponSagaService;
     private final ApplicationEventPublisher eventPublisher;
 
+    /**
+     * 쿠폰 요청을 처리한다.
+     * 이미 처리한 요청이면 건너뛴다.
+     * 처리 결과는 응답 이벤트로 발행한다.
+     *
+     * @return 처리 결과. 이미 처리한 요청이면 null
+     */
     @Transactional
-    public void handle(String sagaId, String eventId, String body) {
+    public CouponApplyResponsePayload handle(String sagaId, String eventId, CouponApplyRequestPayload request) {
         if (messageLog.alreadyProcessed(eventId)) {
             log.info("이미 처리한 쿠폰 요청, 건너뛴다: sagaId={}, eventId={}", sagaId, eventId);
-            return;
+            return null;
         }
-
-        CouponApplyRequestPayload request =
-                sagaPayloadCodec.deserialize(body, CouponApplyRequestPayload.class);
 
         CouponApplyResponsePayload response = switch (request.type()) {
             case REQUEST -> couponSagaService.apply(request);
@@ -41,5 +43,6 @@ public class CouponApplyHandler {
 
         log.info("쿠폰 요청 처리: sagaId={}, eventId={}, type={}, orderId={}, result={}, failureCode={}",
                 sagaId, eventId, request.type(), request.orderId(), response.result(), response.failureCode());
+        return response;
     }
 }

@@ -46,4 +46,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
+
+    // 사가 분산 추적 테스트용
+    testImplementation 'org.springframework.kafka:spring-kafka-test'                    // @EmbeddedKafka
+    testImplementation 'org.springframework.boot:spring-boot-micrometer-tracing-test'   // @AutoConfigureTracing
+    testImplementation 'io.opentelemetry:opentelemetry-sdk-testing'                     // InMemorySpanExporter (버전은 Boot BOM이 가져오는 opentelemetry-bom 1.62.0)
 }

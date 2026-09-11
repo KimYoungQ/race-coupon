@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS outbox_event (
     aggregateid   VARCHAR(255) NOT NULL COMMENT 'Aggregate ID',
     type          VARCHAR(255) NOT NULL COMMENT '이벤트 타입 (ex: OrderCreated, OrderCompleted)',
     payload       JSON         NOT NULL COMMENT '이벤트 페이로드 (JSON)',
+    traceparent   VARCHAR(64)  DEFAULT NULL COMMENT 'W3C 추적 문맥 (traceparent). Debezium이 Kafka 헤더로 승격, 없으면 소비 측이 새 trace 시작',
+    tracestate    VARCHAR(512) DEFAULT NULL COMMENT 'W3C 추적 문맥 (tracestate). 벤더별 부가 정보, 보통 비어 있음',
     created_at    DATETIME(6)  NOT NULL COMMENT '이벤트 발행 날짜/시간',
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Transactional Outbox 패턴: Debezium이 읽어 Kafka로 발행';

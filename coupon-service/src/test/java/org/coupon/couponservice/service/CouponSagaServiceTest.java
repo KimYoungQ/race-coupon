@@ -82,7 +82,7 @@ class CouponSagaServiceTest {
             String eventId = UUID.randomUUID().toString();
 
             // when
-            couponApplyHandler.handle(SAGA_ID, eventId, requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, eventId, request(couponId, RequestType.REQUEST));
 
             // then
             IssuedCoupon after = reload(issued);
@@ -105,11 +105,11 @@ class CouponSagaServiceTest {
             Long couponId = saveCoupon();
             IssuedCoupon issued = issueCoupon(couponId);
             String eventId = UUID.randomUUID().toString();
-            String body = requestBody(couponId, RequestType.REQUEST);
-            couponApplyHandler.handle(SAGA_ID, eventId, body);
+            CouponApplyRequestPayload applyRequest = request(couponId, RequestType.REQUEST);
+            couponApplyHandler.handle(SAGA_ID, eventId, applyRequest);
 
             // when
-            couponApplyHandler.handle(SAGA_ID, eventId, body);
+            couponApplyHandler.handle(SAGA_ID, eventId, applyRequest);
 
             // then
             assertThat(reload(issued).getStatus()).isEqualTo(IssuedCouponStatus.USED);
@@ -123,11 +123,11 @@ class CouponSagaServiceTest {
             // given
             Long couponId = saveCoupon();
             IssuedCoupon issued = issueCoupon(couponId);
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.REQUEST));
             outboxEventRepository.deleteAllInBatch();
 
             // when
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.REQUEST));
 
             // then
             CouponApplyResponsePayload response = onlyResponse();
@@ -154,7 +154,7 @@ class CouponSagaServiceTest {
                         couponApplyHandler.handle(
                                 "saga-" + orderId,
                                 UUID.randomUUID().toString(),
-                                requestBody(orderId, couponId, RequestType.REQUEST));
+                                request(orderId, couponId, RequestType.REQUEST));
                     } finally {
                         latch.countDown();
                     }
@@ -194,11 +194,11 @@ class CouponSagaServiceTest {
             // given
             Long couponId = saveCoupon();
             IssuedCoupon issued = issueCoupon(couponId);
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.REQUEST));
             outboxEventRepository.deleteAllInBatch();
 
             // when
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.CANCEL));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.CANCEL));
 
             // then
             IssuedCoupon after = reload(issued);
@@ -213,15 +213,15 @@ class CouponSagaServiceTest {
             // given
             Long couponId = saveCoupon();
             IssuedCoupon issued = issueCoupon(couponId);
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.REQUEST));
             outboxEventRepository.deleteAllInBatch();
 
             String cancelEventId = UUID.randomUUID().toString();
-            String cancelBody = requestBody(couponId, RequestType.CANCEL);
-            couponApplyHandler.handle(SAGA_ID, cancelEventId, cancelBody);
+            CouponApplyRequestPayload cancelRequest = request(couponId, RequestType.CANCEL);
+            couponApplyHandler.handle(SAGA_ID, cancelEventId, cancelRequest);
 
             // when
-            couponApplyHandler.handle(SAGA_ID, cancelEventId, cancelBody);
+            couponApplyHandler.handle(SAGA_ID, cancelEventId, cancelRequest);
 
             // then
             assertThat(reload(issued).getStatus()).isEqualTo(IssuedCouponStatus.ISSUED);
@@ -235,12 +235,12 @@ class CouponSagaServiceTest {
             // given
             Long couponId = saveCoupon();
             IssuedCoupon issued = issueCoupon(couponId);
-            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), requestBody(couponId, RequestType.REQUEST));
+            couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(), request(couponId, RequestType.REQUEST));
             outboxEventRepository.deleteAllInBatch();
 
             // when
             couponApplyHandler.handle(SAGA_ID, UUID.randomUUID().toString(),
-                    requestBody(999L, couponId, RequestType.CANCEL));
+                    request(999L, couponId, RequestType.CANCEL));
 
             // then
             IssuedCoupon after = reload(issued);
@@ -265,13 +265,12 @@ class CouponSagaServiceTest {
                 IssuedCoupon.builder().userId(USER_ID).couponId(couponId).build());
     }
 
-    private String requestBody(Long couponId, RequestType type) {
-        return requestBody(ORDER_ID, couponId, type);
+    private CouponApplyRequestPayload request(Long couponId, RequestType type) {
+        return request(ORDER_ID, couponId, type);
     }
 
-    private String requestBody(Long orderId, Long couponId, RequestType type) {
-        return sagaPayloadCodec.serialize(
-                new CouponApplyRequestPayload(orderId, USER_ID, couponId, ORDER_AMOUNT, type));
+    private CouponApplyRequestPayload request(Long orderId, Long couponId, RequestType type) {
+        return new CouponApplyRequestPayload(orderId, USER_ID, couponId, ORDER_AMOUNT, type);
     }
 
     private IssuedCoupon reload(IssuedCoupon issued) {

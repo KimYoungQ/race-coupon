@@ -38,10 +38,10 @@ public class SagaResponseHandler {
     private final SagaPayloadCodec sagaPayloadCodec;
 
     @Transactional
-    public void onStockResponse(String sagaId, String eventId, String body) {
+    public SagaResponseOutcome onStockResponse(String sagaId, String eventId, String body) {
         if (messageLog.alreadyProcessed(eventId)) {
             log.info("이미 처리한 재고 응답: sagaId={}, eventId={}", sagaId, eventId);
-            return;
+            return SagaResponseOutcome.skip();
         }
         StockReservationResponsePayload response =
                 sagaPayloadCodec.deserialize(body, StockReservationResponsePayload.class);
@@ -51,7 +51,7 @@ public class SagaResponseHandler {
             log.info("지연/무효 재고 응답 무시: sagaId={}, sagaStatus={}, stepStatus={}, result={}",
                     sagaId, saga.getStatus(), saga.getStepStatus(), response.result());
             messageLog.markProcessed(eventId);
-            return;
+            return SagaResponseOutcome.skip();
         }
 
         Order order = findOrder(saga.getOrderId());
@@ -65,13 +65,16 @@ public class SagaResponseHandler {
 
         log.info("재고 응답 처리: sagaId={}, orderId={}, result={}, sagaStatus={}, orderStatus={}",
                 sagaId, order.getId(), response.result(), saga.getStatus(), order.getStatus());
+
+        return SagaResponseOutcome.handled(
+                response.result().name(), response.failureCode(), saga.getStatus());
     }
 
     @Transactional
-    public void onCouponResponse(String sagaId, String eventId, String body) {
+    public SagaResponseOutcome onCouponResponse(String sagaId, String eventId, String body) {
         if (messageLog.alreadyProcessed(eventId)) {
             log.info("이미 처리한 쿠폰 응답: sagaId={}, eventId={}", sagaId, eventId);
-            return;
+            return SagaResponseOutcome.skip();
         }
         CouponApplyResponsePayload response =
                 sagaPayloadCodec.deserialize(body, CouponApplyResponsePayload.class);
@@ -81,7 +84,7 @@ public class SagaResponseHandler {
             log.info("지연/무효 쿠폰 응답 무시: sagaId={}, sagaStatus={}, stepStatus={}, result={}",
                     sagaId, saga.getStatus(), saga.getStepStatus(), response.result());
             messageLog.markProcessed(eventId);
-            return;
+            return SagaResponseOutcome.skip();
         }
 
         Order order = findOrder(saga.getOrderId());
@@ -95,6 +98,9 @@ public class SagaResponseHandler {
         log.info("쿠폰 응답 처리: sagaId={}, orderId={}, result={}, sagaStatus={}, orderStatus={}, 할인={}, 최종={}",
                 sagaId, order.getId(), response.result(), saga.getStatus(), order.getStatus(),
                 order.getDiscountAmount(), order.getFinalAmount());
+
+        return SagaResponseOutcome.handled(
+                response.result().name(), response.failureCode(), saga.getStatus());
     }
 
     private void syncOrderStatus(AbstractOrderSaga saga, Order order, String failureCode,
