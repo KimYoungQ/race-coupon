@@ -5,7 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.coupon.orderservice.exception.InvalidOrderStateException;
 import org.coupon.sagapersistence.tracing.SagaTraceTag;
 import org.coupon.sagapersistence.tracing.SagaTraceTag.SagaSpan;
+import org.springframework.kafka.annotation.BackOff;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -25,6 +30,15 @@ public class SagaResponseListener {
     private final SagaResponseHandler sagaResponseHandler;
     private final SagaTraceTag sagaTraceTag;
 
+    @RetryableTopic(
+            attempts = "4",
+            backOff = @BackOff(delay = 2000, multiplier = 2.0),
+            autoCreateTopics = "true",
+            numPartitions = "3",
+            replicationFactor = "3",
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            kafkaTemplate = "sagaRetryKafkaTemplate")
     @KafkaListener(
             id = "order-stock-response",
             groupId = "order-saga",
@@ -47,6 +61,15 @@ public class SagaResponseListener {
         }
     }
 
+    @RetryableTopic(
+            attempts = "4",                                                      // 원본 1 + 재시도 3
+            backOff = @BackOff(delay = 2000, multiplier = 2.0),                  // 2s, 4s, 8s
+            autoCreateTopics = "true",
+            numPartitions = "3",
+            replicationFactor = "3",                                             // 브로커 min.insync.replicas=2 를 만족시킨다
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,  // -retry-0, -retry-1, -retry-2, -dlt
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            kafkaTemplate = "sagaRetryKafkaTemplate")
     @KafkaListener(
             id = "order-coupon-response",
             groupId = "order-saga",
@@ -67,6 +90,20 @@ public class SagaResponseListener {
                 throw e;
             }
         }
+    }
+
+    @DltHandler
+    public void onDeadLetter(@Header(KafkaHeaders.RECEIVED_KEY) String sagaId,
+                             @Header("id") byte[] eventId,
+                             @Header(KafkaHeaders.ORIGINAL_TOPIC) byte[] originalTopic,
+                             @Header(KafkaHeaders.EXCEPTION_MESSAGE) byte[] exceptionMessage,
+                             @Payload String body) {
+        log.error("사가 응답 DLT 도착, 재시도 모두 실패: sagaId={}, eventId={}, originalTopic={}, reason={}, body={}",
+                sagaId,
+                new String(eventId, StandardCharsets.UTF_8),
+                new String(originalTopic, StandardCharsets.UTF_8),
+                new String(exceptionMessage, StandardCharsets.UTF_8),
+                body);
     }
 
     /**

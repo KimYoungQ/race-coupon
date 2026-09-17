@@ -34,6 +34,8 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: org.coupon.common.event
+    admin:
+      auto-create: false
 
 saga:
   listener:

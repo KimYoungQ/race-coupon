@@ -1,16 +1,18 @@
 package org.coupon.orderservice.config;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
-import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,9 +38,20 @@ public class SagaKafkaConfig {
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props));
         factory.setConcurrency(concurrency);
         factory.setAutoStartup(autoStartup);
-        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(200L, 5L)));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.getContainerProperties().setObservationEnabled(true);
         return factory;
+    }
+
+    /**
+     * 사가 메시지를 원문 그대로 재시도·DLT 토픽에 보내는 템플릿.
+     * JSON 직렬화로 본문에 따옴표가 추가되는 것을 방지한다.
+     */
+    @Bean
+    public KafkaTemplate<String, String> sagaRetryKafkaTemplate(KafkaProperties kafkaProperties) {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildProducerProperties());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
     }
 }

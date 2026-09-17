@@ -10,7 +10,12 @@ import org.coupon.common.event.RequestType;
 import org.coupon.sagapersistence.outbox.SagaPayloadCodec;
 import org.coupon.sagapersistence.tracing.SagaTraceTag;
 import org.coupon.sagapersistence.tracing.SagaTraceTag.SagaSpan;
+import org.springframework.kafka.annotation.BackOff;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -28,6 +33,14 @@ public class CouponApplyListener {
     private final SagaPayloadCodec sagaPayloadCodec;
     private final SagaTraceTag sagaTraceTag;
 
+    @RetryableTopic(
+            attempts = "4",
+            backOff = @BackOff(delay = 2000, multiplier = 2.0),
+            autoCreateTopics = "true",
+            replicationFactor = "3",
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            kafkaTemplate = "sagaRetryKafkaTemplate")
     @KafkaListener(
             id = "coupon-apply-request",
             groupId = "coupon-saga",
@@ -48,6 +61,20 @@ public class CouponApplyListener {
                 throw e;
             }
         }
+    }
+
+    @DltHandler
+    public void onDeadLetter(@Header(KafkaHeaders.RECEIVED_KEY) String sagaId,
+                             @Header("id") byte[] eventId,
+                             @Header(KafkaHeaders.ORIGINAL_TOPIC) byte[] originalTopic,
+                             @Header(KafkaHeaders.EXCEPTION_MESSAGE) byte[] exceptionMessage,
+                             @Payload String body) {
+        log.error("쿠폰 적용 요청 DLT 도착, 재시도 모두 실패: sagaId={}, eventId={}, originalTopic={}, reason={}, body={}",
+                sagaId,
+                new String(eventId, StandardCharsets.UTF_8),
+                new String(originalTopic, StandardCharsets.UTF_8),
+                new String(exceptionMessage, StandardCharsets.UTF_8),
+                body);
     }
 
     /**
